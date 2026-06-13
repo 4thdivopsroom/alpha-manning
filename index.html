@@ -1,0 +1,1401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SCDF EMS — Ops Roster</title>
+
+<!--
+=======================================================================
+  FIREBASE SETUP GUIDE  (no Cloud Functions needed — Spark plan ok)
+=======================================================================
+
+  STEP 1 — Create Firebase project
+    1. Go to https://console.firebase.google.com
+    2. "Add project" → name it "scdf-ems-roster" → disable Analytics
+    3. Click "Create project"
+
+  STEP 2 — Enable Realtime Database
+    1. Left sidebar → Build → Realtime Database → "Create Database"
+    2. Region: Singapore (asia-southeast1)
+    3. Start in LOCKED mode → "Enable"
+
+  STEP 3 — Enable Anonymous Authentication
+    1. Left sidebar → Build → Authentication → "Get started"
+    2. Sign-in method tab → Anonymous → Enable → Save
+
+  STEP 4 — Get your web app config
+    1. Project Overview (home icon) → click the "</>" web icon
+    2. Register app as "ems-roster-web", skip Firebase Hosting
+    3. Copy the firebaseConfig object → paste it below where it says
+       PASTE YOUR FIREBASE CONFIG HERE
+
+  STEP 5 — Set Security Rules
+    1. Realtime Database → Rules tab
+    2. Replace everything with the rules below → click Publish
+
+    {
+      "rules": {
+        "roster": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "audit": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "personnel": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    }
+
+    Note: write scoping by station is enforced client-side via the
+    PIN system below. Firebase rules keep the database closed to
+    anyone not anonymously signed in via this app.
+
+  STEP 6 — Deploy to GitHub Pages
+    1. Create a repo (private recommended if your CO approves)
+    2. Upload this file as index.html
+    3. Settings → Pages → Branch: main → folder: / (root) → Save
+    4. Live at https://<username>.github.io/<reponame>
+
+=======================================================================
+  PIN SCHEME — edit STATION_PINS and RDR_PIN in the script below
+    Stn 41 Jurong      → PIN: 41
+    Stn 42 Tuas        → PIN: 42
+    Stn 43 Woodlands   → PIN: 43
+    Stn 44 Bukit Batok → PIN: 44
+    Stn 45 Tuas View   → PIN: 45
+    RDR (your team)    → PIN: set RDR_PIN to something non-obvious
+  To rotate any PIN: change the value here and redeploy the HTML.
+=======================================================================
+-->
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+
+/* ─── TOKENS ──────────────────────────────────────── */
+:root {
+  --bg:#0b0d12; --surf:#141820; --surf2:#1a1f2e; --surf3:#1f2535;
+  --bdr:#252b3b; --bdr2:#2e3549;
+  --tx:#e8eaf0; --tx2:#8b93a8; --tx3:#4d566b;
+  --acc:#e8321d; --acc2:#c4291a; --acc-glow:rgba(232,50,29,0.18);
+  --s-green:#22c55e; --s-amber:#f59e0b; --s-red:#ef4444;
+  --s-blue:#3b82f6; --s-purple:#a855f7;
+  --rbg-o:rgba(168,85,247,0.15); --rfc-o:#c084fc;
+  --rbg-w:rgba(239,68,68,0.15);  --rfc-w:#f87171;
+  --rbg-s:rgba(59,130,246,0.15); --rfc-s:#60a5fa;
+  --rbg-c:rgba(245,158,11,0.15); --rfc-c:#fbbf24;
+  --font-ui:'Inter',system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',monospace;
+  --tex:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' x='0' y='0' fill='rgba(255,255,255,0.018)'/%3E%3Crect width='1' height='1' x='2' y='2' fill='rgba(255,255,255,0.018)'/%3E%3C/svg%3E");
+}
+.lt{
+  --bg:#f0f2f7; --surf:#fff; --surf2:#f4f5f9; --surf3:#eceef4;
+  --bdr:#dde0ea; --bdr2:#c8ccda; --tx:#0d1120; --tx2:#4b5570; --tx3:#9aa0b5;
+  --acc-glow:rgba(232,50,29,0.09);
+  --rbg-o:rgba(168,85,247,0.1); --rfc-o:#7c3aed;
+  --rbg-w:rgba(239,68,68,0.1);  --rfc-w:#dc2626;
+  --rbg-s:rgba(59,130,246,0.1); --rfc-s:#1d4ed8;
+  --rbg-c:rgba(245,158,11,0.1); --rfc-c:#b45309;
+  --tex:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='4' height='4'%3E%3Crect width='1' height='1' x='0' y='0' fill='rgba(0,0,0,0.012)'/%3E%3Crect width='1' height='1' x='2' y='2' fill='rgba(0,0,0,0.012)'/%3E%3C/svg%3E");
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-family:var(--font-ui);background:var(--bg);background-image:var(--tex);color:var(--tx);font-size:13px;-webkit-text-size-adjust:100%}
+body{min-height:100vh;display:flex;flex-direction:column}
+
+/* ─── LOADING / AUTH SCREENS ─────────────────────── */
+.screen-overlay{
+  position:fixed;inset:0;z-index:200;
+  background:var(--bg);background-image:var(--tex);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:0;padding:24px;
+}
+.screen-overlay.hidden{display:none}
+.screen-logo{
+  width:56px;height:56px;background:var(--acc);border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:28px;margin-bottom:20px;
+  box-shadow:0 8px 30px rgba(232,50,29,0.4);
+}
+.screen-title{font-size:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
+.screen-sub{font-size:12px;color:var(--tx3);margin-bottom:28px;text-align:center;max-width:300px;line-height:1.6}
+
+/* PIN entry card */
+.pin-card{
+  background:var(--surf);
+  border:1px solid var(--bdr2);
+  border-radius:16px;
+  padding:24px;
+  width:100%;max-width:340px;
+  box-shadow:0 20px 60px rgba(0,0,0,.5);
+}
+.pin-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:8px}
+/* station selector */
+.pin-stn-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px}
+.pin-stn-btn{
+  border:1.5px solid var(--bdr);border-radius:9px;
+  background:var(--surf2);padding:8px 4px;
+  cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;
+  transition:all .15s;font-family:var(--font-ui);
+}
+.pin-stn-btn:hover{border-color:var(--acc)}
+.pin-stn-btn.sel{border-color:var(--acc);background:var(--acc-glow)}
+.pin-stn-btn .psn{font-size:14px;font-weight:700;color:var(--tx);line-height:1}
+.pin-stn-btn .psl{font-size:8.5px;color:var(--tx3);text-align:center}
+.pin-stn-btn.sel .psn,.pin-stn-btn.sel .psl{color:var(--acc)}
+/* PIN dot display */
+.pin-dots{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin:16px 0 14px;
+}
+.pin-dot{
+  width:14px;height:14px;border-radius:50%;
+  border:2px solid var(--bdr2);
+  background:transparent;
+  transition:all .15s;
+}
+.pin-dot.filled{background:var(--acc);border-color:var(--acc);transform:scale(1.1)}
+/* number pad */
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
+.npbtn{
+  height:52px;border:1.5px solid var(--bdr);border-radius:10px;
+  background:var(--surf2);color:var(--tx);
+  font-size:18px;font-weight:600;font-family:var(--font-ui);
+  cursor:pointer;transition:all .1s;
+  display:flex;align-items:center;justify-content:center;
+}
+.npbtn:hover{border-color:var(--bdr2);background:var(--surf3)}
+.npbtn:active{transform:scale(.94);background:var(--surf3)}
+.npbtn.del{font-size:16px;color:var(--tx3)}
+.npbtn.del:hover{color:var(--s-red);border-color:var(--s-red)}
+.pin-submit{
+  width:100%;height:44px;border:none;border-radius:10px;
+  background:var(--acc);color:#fff;
+  font-size:13px;font-weight:700;font-family:var(--font-ui);
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.pin-submit:hover{background:var(--acc2);transform:translateY(-1px)}
+.pin-submit:active{transform:none}
+.pin-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.pin-err{
+  font-size:11px;color:var(--s-red);text-align:center;
+  margin-top:10px;min-height:16px;
+  animation:shake .3s;
+}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+
+/* Loading spinner */
+.spin{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── AUTH STATUS BADGE in header ─────────────────── */
+.auth-badge{
+  display:flex;align-items:center;gap:5px;
+  font-size:11px;font-weight:600;
+  padding:4px 10px;border-radius:20px;
+  flex-shrink:0;white-space:nowrap;cursor:pointer;
+  transition:all .15s;
+}
+.auth-badge.rdr{background:rgba(232,50,29,0.12);color:var(--acc);border:1px solid rgba(232,50,29,0.3)}
+.auth-badge.stn{background:rgba(59,130,246,0.12);color:var(--s-blue);border:1px solid rgba(59,130,246,0.3)}
+.auth-badge.none{background:var(--surf2);color:var(--tx3);border:1px solid var(--bdr2)}
+.auth-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ─── AUDIT LOG PANEL ─────────────────────────────── */
+.audit-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:120;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px}
+.audit-wrap.open{display:flex;animation:mIn .18s ease}
+@keyframes mIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
+.audit-panel{background:var(--surf);border:1px solid var(--bdr2);border-radius:14px;width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.audit-hd{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--bdr);flex-shrink:0;background:var(--surf2)}
+.audit-hd h3{font-size:14px;font-weight:700}
+.audit-hd .sub{font-size:10px;color:var(--tx3);margin-top:2px}
+.audit-x{width:30px;height:30px;border:1px solid var(--bdr2);border-radius:7px;background:var(--surf3);color:var(--tx2);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.audit-x:hover{border-color:var(--s-red);color:var(--s-red)}
+.audit-list{flex:1;overflow-y:auto;padding:10px 14px;display:flex;flex-direction:column;gap:6px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent}
+.audit-entry{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--surf2)}
+.audit-stn-badge{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;font-family:var(--font-mono);flex-shrink:0;margin-top:1px}
+.audit-text{flex:1;font-size:11px;color:var(--tx);line-height:1.5}
+.audit-text .dim{color:var(--tx3)}
+.audit-ts{font-size:9px;color:var(--tx3);white-space:nowrap;font-family:var(--font-mono);margin-top:2px}
+.audit-empty{padding:40px;text-align:center;color:var(--tx3);font-size:12px}
+
+/* ─── HEADER ──────────────────────────────────────── */
+.header{display:flex;align-items:center;gap:10px;padding:0 16px;height:52px;background:var(--surf);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:60;flex-shrink:0}
+.hlogo{width:30px;height:30px;background:var(--acc);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
+.hbrand .name{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1}
+.hbrand .sub{font-size:10px;color:var(--tx3);margin-top:1px}
+.hdiv{width:1px;height:28px;background:var(--bdr);flex-shrink:0}
+.shift-tag{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;flex-shrink:0;white-space:nowrap}
+.shift-am{background:rgba(245,158,11,0.12);color:#f59e0b;border:1px solid rgba(245,158,11,0.25)}
+.shift-pm{background:rgba(168,85,247,0.12);color:#a855f7;border:1px solid rgba(168,85,247,0.25)}
+.shift-tag::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
+.hdate{font-size:11px;color:var(--tx3);font-weight:500;flex-shrink:0;white-space:nowrap}
+.hgap{flex:1}
+.hbtn{height:30px;padding:0 12px;border:1px solid var(--bdr2);border-radius:6px;background:var(--surf2);color:var(--tx2);cursor:pointer;font-size:11px;font-family:var(--font-ui);font-weight:500;display:flex;align-items:center;gap:5px;white-space:nowrap;transition:border-color .15s,color .15s}
+.hbtn:hover{border-color:var(--acc);color:var(--acc)}
+.hbtn.red{background:var(--acc);border-color:var(--acc);color:#fff}
+.hbtn.red:hover{background:var(--acc2)}
+.theme-btn{width:34px;height:30px;background:var(--surf2);border:1px solid var(--bdr2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:15px;transition:color .15s}
+.hbtn-label{display:inline}
+
+/* ─── STATS BAR ───────────────────────────────────── */
+.stats-bar{display:flex;background:var(--surf);border-bottom:1px solid var(--bdr);padding:0 16px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
+.stats-bar::-webkit-scrollbar{display:none}
+.stat-item{display:flex;align-items:center;gap:10px;padding:10px 18px 10px 0;margin-right:18px;border-right:1px solid var(--bdr);min-width:110px;flex-shrink:0}
+.stat-item:last-child{border-right:none;margin-right:0}
+.stat-icon{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.stat-num{font-size:19px;font-weight:700;line-height:1;letter-spacing:-.5px}
+.stat-lbl{font-size:10px;color:var(--tx3);margin-top:2px;text-transform:uppercase;letter-spacing:.05em;font-weight:500;white-space:nowrap}
+.rbar-out{flex:1;height:3px;background:var(--bdr2);border-radius:2px;overflow:hidden;margin-top:4px}
+.rbar-in{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ─── LAYOUT ──────────────────────────────────────── */
+.body{display:flex;flex:1;overflow:hidden;min-height:0}
+.sidebar{width:200px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.sbsec{border-bottom:1px solid var(--bdr);flex-shrink:0}
+.sbhead{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 7px}
+.sbtitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3)}
+.sbtn{height:20px;padding:0 7px;font-size:9px;font-weight:600;border:1px solid var(--bdr2);border-radius:4px;background:transparent;color:var(--tx3);cursor:pointer;font-family:var(--font-ui);transition:color .15s,border-color .15s}
+.sbtn:hover,.sbtn.on{color:var(--acc);border-color:var(--acc)}
+.fchips{display:grid;grid-template-columns:repeat(3,1fr);gap:5px;padding:0 10px 10px}
+.fchip{border:1px solid var(--bdr);border-radius:7px;background:var(--surf2);padding:6px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;transition:all .15s;font-family:var(--font-ui)}
+.fchip:hover{border-color:var(--acc)}
+.fchip.on{border-color:var(--acc);background:var(--acc-glow)}
+.fchip .fn{font-size:12px;font-weight:700;color:var(--tx);line-height:1}
+.fchip .fl{font-size:8.5px;color:var(--tx3);text-align:center;line-height:1.3}
+.fchip.on .fn,.fchip.on .fl{color:var(--acc)}
+.rscroll{flex:1;overflow-y:auto;padding:6px 8px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent}
+.rscroll::-webkit-scrollbar{width:4px}
+.rscroll::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
+
+/* person chip */
+.pchip{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--bdr);border-radius:8px;background:var(--surf2);cursor:grab;user-select:none;font-size:11px;color:var(--tx);transition:all .15s;margin-bottom:4px;touch-action:none;position:relative}
+.pchip::before{content:'⠿';color:var(--tx3);font-size:10px;flex-shrink:0;transition:color .15s;line-height:1}
+.pchip:hover{border-color:var(--acc);box-shadow:0 3px 12px rgba(232,50,29,0.2);transform:translateY(-1px)}
+.pchip:hover::before{color:var(--acc)}
+.pchip.dragging{opacity:.15;cursor:grabbing;transform:scale(.95);box-shadow:none}
+.pchip:last-child{margin-bottom:0}
+
+/* read-only chip (station users can't drag) */
+.pchip.readonly{cursor:default}
+.pchip.readonly::before{display:none}
+.pchip.readonly:hover{transform:none;box-shadow:none;border-color:var(--bdr)}
+
+.av{border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#fff;flex-shrink:0}
+.rank-badge{font-size:8.5px;font-weight:700;padding:1.5px 4px;border-radius:3px;flex-shrink:0;font-family:var(--font-mono);letter-spacing:.04em}
+.rk-o{background:var(--rbg-o);color:var(--rfc-o)}.rk-w{background:var(--rbg-w);color:var(--rfc-w)}
+.rk-s{background:var(--rbg-s);color:var(--rfc-s)}.rk-c{background:var(--rbg-c);color:var(--rfc-c)}
+
+/* sort strip */
+.sort-strip{display:flex;align-items:center;gap:5px;padding:5px 8px;border-top:1px solid var(--bdr);flex-shrink:0}
+.sort-cyc{flex:1;height:24px;border:1px solid var(--bdr);border-radius:5px;background:var(--surf2);color:var(--tx2);cursor:pointer;font-size:10px;font-family:var(--font-ui);font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .12s;white-space:nowrap;overflow:hidden}
+.sort-cyc:hover{color:var(--tx);border-color:var(--bdr2)}
+.sort-cyc.on{border-color:var(--acc);color:var(--acc);background:var(--acc-glow)}
+.sort-clr{width:24px;height:24px;flex-shrink:0;border:1px solid var(--bdr);border-radius:5px;background:var(--surf2);color:var(--tx3);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;transition:all .12s}
+.sort-clr:hover{border-color:var(--s-red);color:var(--s-red)}
+.sort-clr[hidden]{display:none!important}
+.empty-r{padding:14px 8px;text-align:center;font-size:11px;color:var(--tx3)}
+
+/* ─── MAIN ────────────────────────────────────────── */
+.main{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent;min-width:0}
+.main::-webkit-scrollbar{width:6px}
+.main::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+.toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:6px;flex-wrap:wrap}
+.vtbtn{height:28px;padding:0 10px;border:1px solid var(--bdr2);border-radius:6px;background:var(--surf2);color:var(--tx3);cursor:pointer;font-size:11px;font-family:var(--font-ui);font-weight:500;transition:all .12s}
+.vtbtn:hover{color:var(--tx);border-color:var(--bdr2)}
+.vtbtn.on{background:var(--surf3);border-color:var(--bdr2);color:var(--tx)}
+
+/* ─── STATION BLOCKS ──────────────────────────────── */
+.stn-area{display:flex;flex-direction:column;gap:12px}
+.stn-block{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
+.dragging-active .stn-block{border-color:var(--bdr2)}
+.stn-hd{display:flex;align-items:center;gap:12px;padding:10px 14px 0;flex-wrap:wrap}
+.stn-num{font-family:var(--font-mono);font-size:22px;font-weight:700;color:var(--tx3);letter-spacing:-.5px;line-height:1}
+.stn-info{flex:1;min-width:0}
+.stn-name{font-size:13px;font-weight:700;color:var(--tx)}
+.stn-sub{font-size:10px;color:var(--tx3);margin-top:1px}
+.stn-badge{font-size:10px;font-weight:700;padding:3px 9px;border-radius:12px;font-family:var(--font-mono);letter-spacing:.04em;flex-shrink:0}
+.sb-g{background:rgba(34,197,94,0.12);color:var(--s-green);border:1px solid rgba(34,197,94,0.25)}
+.sb-a{background:rgba(245,158,11,0.12);color:var(--s-amber);border:1px solid rgba(245,158,11,0.25)}
+.sb-r{background:rgba(239,68,68,0.12);color:var(--s-red);border:1px solid rgba(239,68,68,0.25)}
+.stn-bar{height:3px;margin:8px 14px 0;background:var(--bdr2);border-radius:2px;overflow:hidden}
+.stn-bar-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.4,0,.2,1)}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:8px;padding:10px}
+.amb{border:1px solid var(--bdr);border-radius:8px;background:var(--surf2);overflow:hidden;transition:border-color .15s}
+.amb-hd{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bdr);background:var(--surf3)}
+.amb-id{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--tx)}
+.amb-type{font-size:9px;color:var(--tx3);margin-top:1px}
+.sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:box-shadow .3s}
+.sdot.alive{background:var(--s-green);box-shadow:0 0 0 3px rgba(34,197,94,0.2)}
+.sdot.empty{background:var(--s-red);box-shadow:0 0 0 3px rgba(239,68,68,0.2)}
+.slots-grid{padding:7px 8px 8px;display:flex;flex-direction:column;gap:5px}
+.arow{display:flex;flex-direction:column}
+.ar-item{display:flex;align-items:stretch;border-bottom:1px solid var(--bdr)}
+.ar-item:last-child{border-bottom:none}
+.ar-hd{display:flex;align-items:center;gap:8px;padding:8px 14px;min-width:150px;flex-shrink:0;border-right:1px solid var(--bdr);background:var(--surf2)}
+.ar-slots{display:flex;flex:1;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 12px}
+.slw{flex:1;min-width:150px}
+
+/* ─── SLOT ────────────────────────────────────────── */
+.slot{position:relative;min-height:30px;border:1.5px dashed var(--bdr2);border-radius:7px;padding:3px 8px;display:flex;align-items:center;gap:6px;transition:all .15s}
+.slot.filled{border-style:solid;border-color:var(--bdr);background:var(--surf3)}
+.slot.dh{border-style:solid;border-color:var(--acc);background:rgba(232,50,29,0.12);box-shadow:0 0 0 3px rgba(232,50,29,0.15),inset 0 0 0 1px rgba(232,50,29,0.2);transform:scale(1.01)}
+.dragging-active .slot:not(.filled){animation:slotPulse 1.6s ease-in-out infinite}
+.dragging-active .slot.dh{animation:none}
+@keyframes slotPulse{0%,100%{border-color:var(--bdr2);background:transparent}50%{border-color:rgba(232,50,29,0.4);background:rgba(232,50,29,0.05)}}
+/* station-user view: slots are not droppable, just display */
+.slot.locked{cursor:default}
+.slot-role{font-size:9px;font-weight:600;color:var(--tx3);min-width:56px;flex-shrink:0;text-transform:uppercase;letter-spacing:.05em}
+.slot-input-wrap{flex:1;position:relative;min-width:0}
+.slot-input{width:100%;font-size:11px;border:none;background:transparent;color:var(--tx);font-family:var(--font-ui);padding:0;outline:none;cursor:text}
+.slot-input::placeholder{color:var(--tx3);font-size:10px}
+.person-inline{display:flex;align-items:center;gap:5px}
+.pname{font-size:11px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rm{cursor:pointer;color:var(--tx3);font-size:14px;padding:1px 4px;border-radius:3px;line-height:1;flex-shrink:0;transition:color .1s}
+.rm:hover{color:var(--s-red)}
+/* ─── SYNC INDICATOR ─────────────────────────────── */
+.sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s}
+.sync-dot.ok{background:var(--s-green)}
+.sync-dot.pending{background:var(--s-amber);animation:syncPulse 1s ease-in-out infinite}
+.sync-dot.err{background:var(--s-red)}
+@keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
+.sync-label{font-size:10px;color:var(--tx3);font-weight:500}
+
+/* drag ghost */
+#dragGhost{position:fixed;pointer-events:none;z-index:9999;background:var(--surf3);border:1.5px solid var(--acc);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx);box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 4px rgba(232,50,29,0.15);transform:translate(-50%,-50%) rotate(2deg);min-width:120px;opacity:0;pointer-events:none;font-family:var(--font-ui)}
+#dragGhost.active{opacity:1}
+
+/* autocomplete */
+.autocomplete{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf3);border:1px solid var(--bdr2);border-radius:7px;z-index:40;overflow:hidden;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.autocomplete.show{display:block}
+.ac-item{padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx);transition:background .1s}
+.ac-item:hover,.ac-item.sel{background:var(--surf2)}
+
+/* modals */
+.mwrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:99;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.mwrap.open{display:flex;animation:mIn .18s ease}
+.modal{background:var(--surf);border:1px solid var(--bdr2);border-radius:14px;padding:22px;width:calc(100% - 32px);max-width:400px;box-shadow:0 28px 70px rgba(0,0,0,.6)}
+.modal-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal h3{font-size:14px;font-weight:700}
+.modal-x{cursor:pointer;color:var(--tx3);font-size:22px;line-height:1;padding:2px 5px;border-radius:4px;transition:color .1s}
+.modal-x:hover{color:var(--tx)}
+.modal-lbl{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.07em;color:var(--tx3);margin-bottom:5px}
+.modal input,.modal select{width:100%;font-size:12px;padding:10px 12px;border:1px solid var(--bdr2);border-radius:8px;background:var(--surf2);color:var(--tx);margin-bottom:12px;font-family:var(--font-ui);outline:none;transition:border-color .15s}
+.modal input:focus,.modal select:focus{border-color:var(--acc)}
+.mbtns{display:flex;gap:8px;justify-content:flex-end;margin-top:6px}
+.mbtn{height:36px;padding:0 18px;border:1px solid var(--bdr2);border-radius:8px;background:var(--surf2);color:var(--tx2);cursor:pointer;font-size:12px;font-family:var(--font-ui);font-weight:500;transition:all .12s}
+.mbtn:hover{color:var(--tx)}
+.mbtn.ac{background:var(--acc);border-color:var(--acc);color:#fff}
+.mbtn.ac:hover{background:var(--acc2)}
+
+/* edit panel */
+.edit-panel-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:110;backdrop-filter:blur(6px);align-items:center;justify-content:center;padding:16px}
+.edit-panel-wrap.open{display:flex;animation:mIn .22s cubic-bezier(.4,0,.2,1)}
+.edit-panel{background:var(--surf);border:1px solid var(--bdr2);border-radius:16px;width:100%;max-width:780px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 40px 100px rgba(0,0,0,.7)}
+.ep-header{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--bdr);flex-shrink:0;background:var(--surf2)}
+.ep-header h2{font-size:15px;font-weight:700;flex:1}
+.ep-header .ep-sub{font-size:11px;color:var(--tx3);margin-top:1px}
+.ep-close{width:32px;height:32px;border:1px solid var(--bdr2);border-radius:8px;background:var(--surf3);color:var(--tx2);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;transition:all .12s;flex-shrink:0}
+.ep-close:hover{border-color:var(--s-red);color:var(--s-red)}
+.ep-body{display:flex;flex:1;overflow:hidden;min-height:0}
+.ep-add{width:240px;flex-shrink:0;border-right:1px solid var(--bdr);padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.ep-add-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3);margin-bottom:4px}
+.ep-field{display:flex;flex-direction:column;gap:4px}
+.ep-field label{font-size:10px;font-weight:600;color:var(--tx3);text-transform:uppercase;letter-spacing:.06em}
+.ep-field input,.ep-field select{width:100%;font-size:12px;padding:9px 11px;border:1px solid var(--bdr2);border-radius:8px;background:var(--surf2);color:var(--tx);font-family:var(--font-ui);outline:none;transition:border-color .15s,box-shadow .15s}
+.ep-field input:focus,.ep-field select:focus{border-color:var(--acc);box-shadow:0 0 0 3px var(--acc-glow)}
+.ep-add-btn{width:100%;height:38px;background:var(--acc);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:600;font-family:var(--font-ui);cursor:pointer;transition:background .15s,transform .1s;display:flex;align-items:center;justify-content:center;gap:6px;margin-top:2px}
+.ep-add-btn:hover{background:var(--acc2);transform:translateY(-1px)}
+.ep-divider{height:1px;background:var(--bdr);margin:4px 0}
+.ep-rand-btn{width:100%;height:32px;background:transparent;border:1px solid var(--bdr2);border-radius:7px;color:var(--tx3);font-size:11px;font-weight:500;font-family:var(--font-ui);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.ep-rand-btn:hover{border-color:var(--s-purple);color:var(--s-purple);background:rgba(168,85,247,0.07)}
+.ep-list-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.ep-list-toolbar{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--bdr);flex-shrink:0}
+.ep-search{flex:1;height:32px;padding:0 10px;border:1px solid var(--bdr2);border-radius:7px;background:var(--surf2);color:var(--tx);font-size:11px;font-family:var(--font-ui);outline:none;transition:border-color .15s}
+.ep-search:focus{border-color:var(--acc)}
+.ep-count{font-size:10px;color:var(--tx3);white-space:nowrap;font-weight:500}
+.ep-del-all{height:28px;padding:0 10px;border:1px solid var(--bdr2);border-radius:6px;background:transparent;color:var(--tx3);font-size:10px;font-family:var(--font-ui);cursor:pointer;transition:all .12s;white-space:nowrap}
+.ep-del-all:hover{border-color:var(--s-red);color:var(--s-red)}
+.ep-list{flex:1;overflow-y:auto;padding:8px 10px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent;display:flex;flex-direction:column;gap:4px}
+.ep-list::-webkit-scrollbar{width:4px}
+.ep-list::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
+.ep-card{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--bdr);border-radius:9px;background:var(--surf2);transition:all .15s;flex-shrink:0}
+.ep-card:hover{border-color:var(--bdr2);background:var(--surf3)}
+.ep-card-info{flex:1;min-width:0}
+.ep-card-name{font-size:12px;font-weight:600;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ep-card-meta{display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap}
+.ep-card-stn{font-size:9.5px;color:var(--tx3)}
+.ep-sdot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.ep-sdot.on{background:var(--s-green)}.ep-sdot.off{background:var(--tx3)}
+.ep-card-status{font-size:9.5px;color:var(--tx3)}
+.ep-card-actions{display:flex;gap:5px;flex-shrink:0}
+.ep-edit-btn,.ep-del-btn{width:26px;height:26px;border-radius:6px;border:1px solid var(--bdr2);background:transparent;cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;transition:all .12s;color:var(--tx3)}
+.ep-edit-btn:hover{border-color:var(--s-blue);color:var(--s-blue);background:rgba(59,130,246,0.08)}
+.ep-del-btn:hover{border-color:var(--s-red);color:var(--s-red);background:rgba(239,68,68,0.08)}
+.ep-card.editing{border-color:var(--acc);background:rgba(232,50,29,0.05)}
+.ep-inline-edit{display:flex;gap:5px;padding:6px 0 2px;flex-wrap:wrap}
+.ep-ie-input{flex:1;min-width:80px;height:28px;padding:0 8px;border:1px solid var(--bdr2);border-radius:6px;background:var(--surf);color:var(--tx);font-size:11px;font-family:var(--font-ui);outline:none;transition:border-color .15s}
+.ep-ie-input:focus{border-color:var(--acc)}
+.ep-ie-save{height:28px;padding:0 10px;border:none;border-radius:6px;background:var(--acc);color:#fff;font-size:11px;font-family:var(--font-ui);font-weight:600;cursor:pointer}
+.ep-ie-cancel{height:28px;padding:0 8px;border:1px solid var(--bdr2);border-radius:6px;background:transparent;color:var(--tx3);font-size:11px;font-family:var(--font-ui);cursor:pointer}
+.ep-empty{padding:40px;text-align:center;color:var(--tx3);font-size:12px}
+
+/* mobile */
+.mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:70}
+.mob-overlay.open{display:block}
+.mob-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--bdr);padding:8px 12px max(8px,env(safe-area-inset-bottom));z-index:65;gap:6px;align-items:center}
+.mob-fscroll{display:flex;gap:5px;overflow-x:auto;flex:1;scrollbar-width:none}
+.mob-fscroll::-webkit-scrollbar{display:none}
+.mob-fab{width:44px;height:44px;flex-shrink:0;background:var(--acc);border-radius:50%;border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(232,50,29,.45);position:relative}
+.fab-badge{position:absolute;top:-3px;right:-3px;min-width:16px;height:16px;background:var(--s-green);border-radius:8px;font-size:9px;font-weight:700;color:#fff;display:flex;align-items:center;justify-content:center;padding:0 3px;border:2px solid var(--surf)}
+.crew-drawer{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-radius:14px 14px 0 0;border-top:1px solid var(--bdr2);z-index:75;flex-direction:column;max-height:80vh;transform:translateY(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);box-shadow:0 -8px 40px rgba(0,0,0,.4)}
+.crew-drawer.open{transform:translateY(0)}
+.drawer-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 14px 8px;flex-shrink:0}
+.drawer-grab{width:36px;height:4px;background:var(--bdr2);border-radius:2px;margin:0 auto 6px}
+.drawer-title{font-size:12px;font-weight:700}
+.drawer-xbtn{width:26px;height:26px;border:none;background:var(--surf2);border-radius:5px;cursor:pointer;color:var(--tx3);font-size:16px;display:flex;align-items:center;justify-content:center}
+.mob-fchip{display:inline-flex;flex-direction:column;align-items:center;gap:1px;border:1px solid var(--bdr);border-radius:7px;background:var(--surf2);padding:5px 8px;cursor:pointer;white-space:nowrap;flex-shrink:0;font-family:var(--font-ui);transition:border-color .15s}
+.mob-fchip .fn{font-size:11px;font-weight:700;color:var(--tx)}
+.mob-fchip .fl{font-size:8px;color:var(--tx3)}
+.mob-fchip.on{border-color:var(--acc);background:var(--acc-glow)}
+.mob-fchip.on .fn,.mob-fchip.on .fl{color:var(--acc)}
+
+@media(max-width:699px){
+  .body{display:block;overflow:visible;flex:none}
+  .sidebar{display:none}
+  .main{overflow:visible;padding:12px 12px 80px}
+  .hdiv,.hdate{display:none}
+  .hbtn-label{display:none}
+  .hbtn{padding:0 8px;width:34px;justify-content:center}
+  .stats-bar{padding:0 12px}
+  .stat-item{min-width:80px;padding:8px 12px 8px 0;margin-right:12px}
+  .stat-icon{width:26px;height:26px}
+  .stat-num{font-size:16px}
+  .stat-lbl{font-size:9px}
+  .mob-bar{display:flex}
+  .crew-drawer{display:flex}
+  .agrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;padding:8px}
+  .ar-item{flex-direction:column}
+  .ar-hd{min-width:0;border-right:none;border-bottom:1px solid var(--bdr);padding:7px 12px}
+  .ar-slots{padding:7px 8px}
+  .slw{min-width:120px}
+  .stn-hd{gap:8px;padding:10px 12px 0}
+  .stn-num{font-size:18px}
+  .ep-add{width:100%;border-right:none;border-bottom:1px solid var(--bdr)}
+  .ep-body{flex-direction:column}
+  .edit-panel{max-height:95vh}
+}
+@media(min-width:700px){
+  .mob-bar,.crew-drawer,.mob-overlay{display:none!important}
+}
+</style>
+</head>
+<body id="app">
+
+<!-- ═══════ LOADING SCREEN ═══════ -->
+<div class="screen-overlay" id="loadingScreen">
+  <div class="screen-logo">🚑</div>
+  <div class="screen-title">SCDF EMS Roster</div>
+  <div class="screen-sub">Connecting to Firebase…</div>
+  <div class="spin" style="margin-top:8px"></div>
+</div>
+
+<!-- ═══════ PIN AUTH SCREEN ═══════ -->
+<div class="screen-overlay hidden" id="pinScreen">
+  <div class="screen-logo">🔐</div>
+  <div class="screen-title">SCDF EMS Roster</div>
+  <div class="screen-sub">Select your station and enter your PIN to continue.</div>
+  <div class="pin-card">
+    <div class="pin-label">Select station</div>
+    <div class="pin-stn-grid" id="pinStnGrid"></div>
+    <div class="pin-label" style="margin-top:4px">Enter PIN</div>
+    <div class="pin-dots" id="pinDots">
+      <div class="pin-dot" id="d0"></div>
+      <div class="pin-dot" id="d1"></div>
+      <div class="pin-dot" id="d2"></div>
+      <div class="pin-dot" id="d3"></div>
+    </div>
+    <div class="numpad" id="numpad"></div>
+    <button class="pin-submit" id="pinSubmit" onclick="submitPin()" disabled>
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      Confirm
+    </button>
+    <div class="pin-err" id="pinErr"></div>
+  </div>
+</div>
+
+<div id="dragGhost"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="hlogo">🚑</div>
+  <div class="hbrand"><div class="name">SCDF EMS</div><div class="sub">Operations Roster</div></div>
+  <div class="hdiv"></div>
+  <span class="shift-tag" id="shiftBadge"></span>
+  <div class="hdate" id="dateLabel"></div>
+  <div class="hgap"></div>
+  <!-- sync status -->
+  <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" id="syncStatus">
+    <div class="sync-dot ok" id="syncDot"></div>
+    <span class="sync-label" id="syncLabel">Live</span>
+  </div>
+  <div class="hdiv"></div>
+  <!-- auth badge — shows who's logged in, click to logout -->
+  <div class="auth-badge none" id="authBadge" onclick="logoutPrompt()" title="Click to sign out">Not signed in</div>
+  <!-- RDR-only buttons -->
+  <button class="hbtn red" id="btnPersonnel" onclick="openEditPanel()" title="Manage Personnel" style="display:none">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span class="hbtn-label">Personnel</span>
+  </button>
+  <button class="hbtn" id="btnAudit" onclick="openAuditPanel()" title="Audit Log" style="display:none">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    <span class="hbtn-label">Audit</span>
+  </button>
+  <button class="hbtn" id="btnAppAdd" onclick="openM('aModal')" title="Add Appliance" style="display:none">
+    <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    <span class="hbtn-label">Appliance</span>
+  </button>
+  <!-- station user: submit paramedic info button -->
+  <button class="hbtn" id="btnStnLogin" onclick="showPinScreen()" style="display:none">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    <span class="hbtn-label">Sign in</span>
+  </button>
+  <button class="theme-btn" onclick="toggleDark()" id="themeBtnEl">☾</button>
+</header>
+
+<div class="stats-bar" id="statsBar"></div>
+
+<div class="body">
+  <div class="sidebar">
+    <div class="sbsec">
+      <div class="sbhead"><span class="sbtitle">Stations</span></div>
+      <div class="fchips" id="filterRow"></div>
+    </div>
+    <div class="sbsec" style="flex:1;display:flex;flex-direction:column;overflow:hidden;border-bottom:none">
+      <div class="sbhead">
+        <span class="sbtitle">Unassigned Crew</span>
+        <button class="sbtn" id="sbEditBtn" onclick="openEditPanel()" style="display:none">Edit ✏</button>
+      </div>
+      <div class="rscroll" id="rosterList"></div>
+      <div class="sort-strip">
+        <button class="sort-cyc" id="sortCycBtn" onclick="cycleSortMode()"><span id="sortIcon">↕</span><span id="sortLabel"> Sort</span></button>
+        <button class="sort-clr" id="sortClrBtn" onclick="clearSort()" hidden>✕</button>
+      </div>
+    </div>
+  </div>
+  <main class="main">
+    <div class="toolbar">
+      <div style="display:flex;align-items:center;gap:4px">
+        <span style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Sort</span>
+        <button class="vtbtn" id="mobSortBtn" onclick="cycleSortMode()" style="min-width:110px">↕ Default</button>
+      </div>
+      <div style="display:flex;gap:4px">
+        <span style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;font-weight:600;display:flex;align-items:center;margin-right:2px">View</span>
+        <button class="vtbtn on" id="viewGrid" onclick="setView('grid')">⊞ Grid</button>
+        <button class="vtbtn" id="viewRow" onclick="setView('row')">☰ List</button>
+      </div>
+    </div>
+    <div class="stn-area" id="stnArea"></div>
+  </main>
+</div>
+
+<!-- mobile bottom bar -->
+<div class="mob-bar" id="mobBar">
+  <div class="mob-fscroll" id="mobFilterRow"></div>
+  <button class="mob-fab" onclick="openDrawer()">👥<div class="fab-badge" id="fabBadge">0</div></button>
+</div>
+<div class="mob-overlay" id="mobOverlay" onclick="closeDrawer()"></div>
+<div class="crew-drawer" id="crewDrawer">
+  <div class="drawer-hd">
+    <div style="width:26px"></div>
+    <div style="text-align:center"><div class="drawer-grab"></div><div class="drawer-title">Unassigned Crew</div></div>
+    <button class="drawer-xbtn" onclick="closeDrawer()">×</button>
+  </div>
+  <div style="padding:0 10px 8px;display:flex;gap:6px;border-bottom:1px solid var(--bdr);flex-shrink:0">
+    <button class="sort-cyc" id="drawSortBtn" onclick="cycleSortMode()" style="height:30px"><span id="drawSortIcon">↕</span><span id="drawSortLabel"> Sort</span></button>
+    <button class="sort-clr" id="drawClrBtn" onclick="clearSort()" style="width:30px;height:30px" hidden>✕</button>
+  </div>
+  <div class="rscroll" id="drawerRosterList" style="flex:1;padding:8px 10px"></div>
+</div>
+
+<!-- APPLIANCE MODAL (RDR only) -->
+<div class="mwrap" id="aModal">
+  <div class="modal">
+    <div class="modal-hd"><h3>Add Appliance</h3><span class="modal-x" onclick="closeM('aModal')">×</span></div>
+    <div class="modal-lbl">Appliance ID</div><input id="maId" placeholder="e.g. A461">
+    <div class="modal-lbl">Type</div><input id="maType" placeholder="Ambulance / Fast Response">
+    <div class="modal-lbl">Station</div><select id="maStn"><option value="">Select station…</option></select>
+    <div class="mbtns"><button class="mbtn" onclick="closeM('aModal')">Cancel</button><button class="mbtn ac" onclick="saveApp()">Add</button></div>
+  </div>
+</div>
+
+<!-- EDIT PERSONNEL PANEL (RDR only) -->
+<div class="edit-panel-wrap" id="editPanel">
+  <div class="edit-panel">
+    <div class="ep-header">
+      <div><h2>👥 Manage Personnel</h2><div class="ep-sub" id="epSubtitle">…</div></div>
+      <button class="ep-close" onclick="closeEditPanel()">×</button>
+    </div>
+    <div class="ep-body">
+      <div class="ep-add">
+        <div class="ep-add-title">Add new crew member</div>
+        <div class="ep-field"><label>Full name</label><input id="epName" placeholder="e.g. Tan Wei Ming" autocomplete="off"></div>
+        <div class="ep-field"><label>Rank</label>
+          <select id="epRank">
+            <option value="SGT">SGT — Sergeant</option><option value="SSG">SSG — Staff Sergeant</option>
+            <option value="WO">WO — Warrant Officer</option><option value="LTA">LTA — Lieutenant</option>
+            <option value="CPT">CPT — Captain</option><option value="MAJ">MAJ — Major</option><option value="CPL">CPL — Corporal</option>
+          </select>
+        </div>
+        <div class="ep-field"><label>Home station</label><select id="epStn"><option value="">Unassigned</option></select></div>
+        <button class="ep-add-btn" onclick="epAdd()">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+          Add Personnel
+        </button>
+        <div class="ep-divider"></div>
+        <button class="ep-rand-btn" onclick="epAddRandom()">🎲 Add random crew member</button>
+        <button class="ep-rand-btn" onclick="epAddRandomBatch(5)" style="margin-top:4px">🎲 Add 5 random crew</button>
+      </div>
+      <div class="ep-list-wrap">
+        <div class="ep-list-toolbar">
+          <input class="ep-search" id="epSearch" placeholder="Search by name or rank…" oninput="renderEpList()">
+          <span class="ep-count" id="epCount"></span>
+          <button class="ep-del-all" onclick="epClearUnassigned()">Clear unassigned</button>
+        </div>
+        <div class="ep-list" id="epList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- AUDIT LOG PANEL (RDR only) -->
+<div class="audit-wrap" id="auditPanel">
+  <div class="audit-panel">
+    <div class="audit-hd">
+      <div><h3>📋 Audit Log</h3><div class="sub">All writes from all stations, newest first</div></div>
+      <button class="audit-x" onclick="closeAuditPanel()">×</button>
+    </div>
+    <div class="audit-list" id="auditList"><div class="audit-empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getDatabase, ref, onValue, set, get, push, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+/* ══════════════════════════════════════════════════
+   ▼▼  PASTE YOUR FIREBASE CONFIG HERE  ▼▼
+   Replace the placeholder object below with the
+   firebaseConfig object from your Firebase console
+   (Project Settings → Your apps → SDK setup)
+══════════════════════════════════════════════════ */
+const firebaseConfig = {
+  apiKey:            "PASTE_API_KEY_HERE",
+  authDomain:        "PASTE_AUTH_DOMAIN_HERE",
+  databaseURL:       "PASTE_DATABASE_URL_HERE",
+  projectId:         "PASTE_PROJECT_ID_HERE",
+  storageBucket:     "PASTE_STORAGE_BUCKET_HERE",
+  messagingSenderId: "PASTE_MESSAGING_SENDER_ID_HERE",
+  appId:             "PASTE_APP_ID_HERE"
+};
+/* ══════════════════════════════════════════════════ */
+
+const app  = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db   = getDatabase(app);
+
+// expose globals the rest of the script needs
+window._firebase = { auth, db, ref, onValue, set, get, push, serverTimestamp };
+window._firebaseReady = true;
+window.dispatchEvent(new Event('firebaseReady'));
+</script>
+
+<script>
+// ─── RANDOM NAME POOL ─────────────────────────────
+const FIRST=['Wei Ming','Jun Hao','Kai Xian','Rui En','Zheng Yang','Amirul','Faizal','Hafiz','Zulkifli','Imran','Rahul','Karthik','Vikram','Dhanesh','Pradeep','Jun Wei','Bing Rong','Yao Lun','Si Han','Ze Kai','Syafiq','Azri','Naqib','Hakeem','Rizwan','Wen Jie','Jian Wei','Zhi Hao','Yi Xiang','Kian Ann','Aisha','Farhana','Nurul','Siti','Aishah','Mei Ling','Hui Fen','Li Ting','Jia Qi','Yan Ling'];
+const LAST=['Tan','Lim','Lee','Wong','Ng','Ong','Chua','Koh','Chen','Teo','Yap','Goh','Bte Rahmat','Bin Aziz','Bin Hamid','s/o Rajan','s/o Kumar','Pillai','Krishnan'];
+const RANKS=['SGT','SGT','SGT','SGT','SSG','SSG','WO','LTA','CPL'];
+function randName(){return FIRST[~~(Math.random()*FIRST.length)]+' '+LAST[~~(Math.random()*LAST.length)];}
+function randRank(){return RANKS[~~(Math.random()*RANKS.length)];}
+
+// ─── CONSTANTS ────────────────────────────────────
+const STNS=[
+  {id:'41',name:'Stn 41',loc:'Jurong'},
+  {id:'42',name:'Stn 42',loc:'Tuas'},
+  {id:'43',name:'Stn 43',loc:'Woodlands'},
+  {id:'44',name:'Stn 44',loc:'Bukit Batok'},
+  {id:'45',name:'Stn 45',loc:'Tuas View'},
+];
+const APPTYPES={
+  A411:'Ambulance',A412:'Ambulance',A413:'Ambulance',A414:'Ambulance',A415:'Ambulance',
+  PA411:'Fast Response',PA412:'Fast Response',PA413:'Fast Response',
+  A421:'Ambulance',PA421:'Fast Response',
+  A431:'Ambulance',A432:'Ambulance',A433:'Ambulance',A434:'Ambulance',A435:'Ambulance',
+  PA431:'Fast Response',PA432:'Fast Response',
+  A441:'Ambulance',A442:'Ambulance',A443:'Ambulance',A444:'Ambulance',A445:'Ambulance',A446:'Ambulance',
+  PA441:'Fast Response',PA442:'Fast Response',PA443:'Fast Response',PA444:'Fast Response',PA445:'Fast Response',
+  A451:'Ambulance',PA451:'Fast Response',
+};
+const AVCOLS=['#e8321d','#1d4ed8','#15803d','#d97706','#7c3aed','#0e7490','#db2777','#065f46','#b45309','#1e40af','#9d174d','#1e3a8a','#7e1d1d','#1d4e7e','#1d7e3e'];
+const SORT_MODES=[
+  {id:'none',icon:'↕',label:'Default'},{id:'az',icon:'A↓',label:'Name A→Z'},
+  {id:'za',icon:'Z↑',label:'Name Z→A'},{id:'rank-hi',icon:'★↓',label:'Rank High→Low'},
+  {id:'rank-lo',icon:'★↑',label:'Rank Low→High'},{id:'asgn-1',icon:'✓↓',label:'Assigned first'},
+  {id:'asgn-0',icon:'○↓',label:'Unassigned first'},
+];
+const RANK_W={COL:7,MAJ:6,CPT:5,LTA:4,WO:3,SWO:3,WO1:3,WO2:3,SSG:2,SGT:1,SGT1:1,SGT2:1,SGT3:1,CPL:0,LCP:0};
+
+// ─── STATE ────────────────────────────────────────
+let persons=[], appliances=[], assigns={};
+let drag=null,touchPid=null;
+let filt='all',dark=true,viewMode='grid',sortIdx=0,activeAC=null,epEditId=null;
+
+// Auth state
+let currentUser=null;          // Firebase auth user
+let currentStationId=null;     // "41"–"45" or "RDR" or null
+let isRDR=false;               // full access
+let isStnUser=false;           // station-scoped write
+
+let pidCounter=100;
+function mkPerson(name,rank,stn){return{id:'p'+(pidCounter++),name,rank,stn:stn||''};}
+
+let pendingWrites=0;
+function setSyncState(state,msg){
+  const dot=document.getElementById('syncDot');
+  const lbl=document.getElementById('syncLabel');
+  if(dot){dot.className='sync-dot '+state;}
+  if(lbl)lbl.textContent=msg;
+}
+
+// ─── PIN SCREEN ────────────────────────────────────
+const PIN_STATIONS=[...STNS,{id:'RDR',name:'RDR',loc:'4th Div'}];
+let pinBuffer='';
+let pinSelectedStn=null;
+
+function buildPinScreen(){
+  const grid=document.getElementById('pinStnGrid');
+  grid.innerHTML=PIN_STATIONS.map(s=>`
+    <button class="pin-stn-btn" id="psb_${s.id}" onclick="selectPinStn('${s.id}')">
+      <span class="psn">${s.id}</span><span class="psl">${s.loc}</span>
+    </button>`).join('');
+  buildNumpad();
+}
+
+function buildNumpad(){
+  const pad=document.getElementById('numpad');
+  const keys=['1','2','3','4','5','6','7','8','9','','0','⌫'];
+  pad.innerHTML=keys.map(k=>k===''?'<div></div>':
+    `<button class="npbtn${k==='⌫'?' del':''}" onclick="npPress('${k}')">${k}</button>`
+  ).join('');
+}
+
+function selectPinStn(id){
+  pinSelectedStn=id;pinBuffer='';updatePinDots();
+  document.querySelectorAll('.pin-stn-btn').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('psb_'+id)?.classList.add('sel');
+  document.getElementById('pinErr').textContent='';
+  checkPinReady();
+}
+
+function npPress(k){
+  if(k==='⌫'){pinBuffer=pinBuffer.slice(0,-1);}
+  else if(pinBuffer.length<4){pinBuffer+=k;}
+  updatePinDots();checkPinReady();
+}
+
+function updatePinDots(){
+  for(let i=0;i<4;i++){
+    const d=document.getElementById('d'+i);
+    if(d)d.classList.toggle('filled',i<pinBuffer.length);
+  }
+}
+
+function checkPinReady(){
+  const btn=document.getElementById('pinSubmit');
+  if(btn)btn.disabled=!(pinSelectedStn&&pinBuffer.length>=2);
+}
+
+function showPinScreen(){
+  document.getElementById('pinScreen').classList.remove('hidden');
+  pinBuffer='';pinSelectedStn=null;updatePinDots();
+  document.getElementById('pinErr').textContent='';
+  document.querySelectorAll('.pin-stn-btn').forEach(b=>b.classList.remove('sel'));
+  checkPinReady();
+}
+function hidePinScreen(){document.getElementById('pinScreen').classList.add('hidden');}
+
+// ─── PIN CONFIG ────────────────────────────────────
+// Station PINs: station number is the PIN for simplicity.
+// RDR_PIN: change this to something only your team knows.
+// To rotate any PIN, update the value here and redeploy to GitHub Pages.
+const STATION_PINS = {
+  "41": "41",
+  "42": "42",
+  "43": "43",
+  "44": "44",
+  "45": "45",
+};
+const RDR_PIN = "YOUR_RDR_PIN_HERE"; // ← change this before deploying
+
+async function submitPin() {
+  if (!pinSelectedStn || pinBuffer.length < 2) return;
+
+  const btn = document.getElementById('pinSubmit');
+  btn.disabled = true;
+  document.getElementById('pinErr').textContent = '';
+
+  // Small delay — makes casual brute-forcing feel slower
+  await new Promise(r => setTimeout(r, 400));
+
+  const expected = pinSelectedStn === 'RDR'
+    ? RDR_PIN
+    : STATION_PINS[pinSelectedStn];
+
+  if (!expected || pinBuffer !== String(expected)) {
+    const err = document.getElementById('pinErr');
+    err.textContent = 'Incorrect PIN — try again';
+    err.style.animation = 'none';
+    requestAnimationFrame(() => { err.style.animation = ''; });
+    pinBuffer = '';
+    updatePinDots();
+    btn.disabled = false;
+    checkPinReady();
+    return;
+  }
+
+  // PIN correct — set auth state locally
+  currentStationId = pinSelectedStn;
+  isRDR = (pinSelectedStn === 'RDR');
+  isStnUser = !isRDR;
+
+  // Write audit entry to Firebase
+  try {
+    const { db, ref, push } = window._firebase;
+    await push(ref(db, 'audit'), {
+      event:     'login',
+      stationId: currentStationId,
+      uid:       currentUser?.uid || 'anonymous',
+      ts:        Date.now(),
+    });
+  } catch (e) {
+    // Audit failure is non-fatal — login still succeeds
+    console.warn('Audit write failed:', e.message);
+  }
+
+  updateAuthUI();
+  hidePinScreen();
+  btn.disabled = false;
+  checkPinReady();
+}
+
+function updateAuthUI(){
+  const badge=document.getElementById('authBadge');
+  if(!currentStationId){
+    badge.textContent='Not signed in';badge.className='auth-badge none';
+    document.getElementById('btnPersonnel').style.display='none';
+    document.getElementById('btnAudit').style.display='none';
+    document.getElementById('btnAppAdd').style.display='none';
+    document.getElementById('btnStnLogin').style.display='flex';
+    document.getElementById('sbEditBtn').style.display='none';
+  }else if(isRDR){
+    badge.textContent='🔴 RDR';badge.className='auth-badge rdr';
+    document.getElementById('btnPersonnel').style.display='flex';
+    document.getElementById('btnAudit').style.display='flex';
+    document.getElementById('btnAppAdd').style.display='flex';
+    document.getElementById('btnStnLogin').style.display='none';
+    document.getElementById('sbEditBtn').style.display='block';
+  }else{
+    const stn=STNS.find(s=>s.id===currentStationId);
+    badge.textContent='📍 '+stn?.name;badge.className='auth-badge stn';
+    document.getElementById('btnPersonnel').style.display='none';
+    document.getElementById('btnAudit').style.display='none';
+    document.getElementById('btnAppAdd').style.display='none';
+    document.getElementById('btnStnLogin').style.display='none';
+    document.getElementById('sbEditBtn').style.display='none';
+  }
+  renderRoster();renderStations();
+}
+
+function logoutPrompt(){
+  if(!currentStationId)return showPinScreen();
+  if(confirm('Sign out of '+currentStationId+'?')){
+    currentStationId=null;isRDR=false;isStnUser=false;updateAuthUI();
+  }
+}
+
+// ─── FIREBASE DATA INIT ────────────────────────────
+function initFirebaseListeners(){
+  const {db,ref,onValue}=window._firebase;
+
+  // Personnel
+  onValue(ref(db,'personnel'),snap=>{
+    if(snap.exists()){
+      const data=snap.val();
+      persons=Object.values(data).map(p=>({...p}));
+    }else{
+      // First run: seed with random data
+      seedInitialData();
+    }
+    refresh();
+  });
+
+  // Roster assignments — keyed per station
+  STNS.forEach(stn=>{
+    onValue(ref(db,'roster/'+stn.id),snap=>{
+      if(snap.exists()){
+        const data=snap.val();
+        // data is {applianceId: {slotName: personId|null}}
+        Object.entries(data).forEach(([appId,slots])=>{
+          if(!assigns[appId])assigns[appId]={};
+          Object.entries(slots).forEach(([sl,pid])=>{assigns[appId][sl]=pid;});
+        });
+      }
+      renderStats();renderStations();
+    });
+  });
+}
+
+function seedInitialData(){
+  const {db,ref,set}=window._firebase;
+  const initialPersons={};
+  let ctr=100;
+  const stationCounts={41:6,42:3,43:6,44:8,45:3};
+  Object.entries(stationCounts).forEach(([stnId,count])=>{
+    const ranks=['LTA','WO','SSG','SGT','SGT','SGT','SGT','CPL'];
+    for(let i=0;i<count;i++){
+      const id='p'+(ctr++);
+      initialPersons[id]={id,name:randName(),rank:ranks[i]||'SGT',stn:stnId};
+    }
+  });
+  initialPersons['p'+(ctr++)]={id:'p'+(ctr-1),name:randName(),rank:'SGT',stn:''};
+  set(ref(db,'personnel'),initialPersons);
+
+  // Init empty roster for each appliance
+  const initialRoster={};
+  STNS.forEach(stn=>{
+    initialRoster[stn.id]={};
+    getAppsForStn(stn.id).forEach(a=>{
+      initialRoster[stn.id][a.id]={};
+      a.slots.forEach(sl=>{initialRoster[stn.id][a.id][sl]=null;});
+    });
+  });
+  set(ref(db,'roster'),initialRoster);
+}
+
+function getAppsForStn(stnId){return appliances.filter(a=>a.stn===stnId);}
+
+// ─── WRITE HELPERS ─────────────────────────────────
+async function writeAssign(appId,slot,pid){
+  const {db,ref,set,push,serverTimestamp}=window._firebase;
+  const app=appliances.find(a=>a.id===appId);if(!app)return;
+  const stnId=app.stn;
+  // Permission check client-side (server rules enforce this too)
+  if(!currentStationId)return;
+  if(isStnUser&&stnId!==currentStationId){
+    alert('You can only edit your own station ('+currentStationId+')');return;
+  }
+  pendingWrites++;setSyncState('pending','Saving…');
+  try{
+    await set(ref(db,`roster/${stnId}/${appId}/${slot}`),pid);
+    // Audit entry
+    const prevPid=assigns[appId]?.[slot];
+    await push(ref(db,'audit'),{
+      ts:Date.now(),stationId:currentStationId,
+      appId,slot,action:pid?'assign':'unassign',
+      personId:pid||prevPid||null,
+      uid:window._firebase.auth.currentUser?.uid||'unknown'
+    });
+    setSyncState('ok','Saved');
+  }catch(e){
+    setSyncState('err','Error');alert('Write failed: '+e.message);
+  }finally{pendingWrites--;if(pendingWrites===0)setTimeout(()=>setSyncState('ok','Live'),1200);}
+}
+
+async function writePersonnel(updatedPersons){
+  if(!isRDR)return;
+  const {db,ref,set}=window._firebase;
+  const obj={};updatedPersons.forEach(p=>{obj[p.id]=p;});
+  pendingWrites++;setSyncState('pending','Saving…');
+  try{
+    await set(ref(db,'personnel'),obj);
+    setSyncState('ok','Saved');
+  }catch(e){setSyncState('err','Error');alert('Write failed: '+e.message);}
+  finally{pendingWrites--;if(pendingWrites===0)setTimeout(()=>setSyncState('ok','Live'),1200);}
+}
+
+// ─── HELPERS ───────────────────────────────────────
+function inits(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
+function avCol(id){const i=persons.findIndex(p=>p.id===id);return i>=0?AVCOLS[i%AVCOLS.length]:'#888';}
+function rankCls(r){
+  if(!r)return'rk-s';const u=r.toUpperCase();
+  if(['LTA','CPT','MAJ','COL'].includes(u))return'rk-o';
+  if(['WO','WO1','WO2','SSG','SWO'].includes(u))return'rk-w';
+  if(['SGT','SGT1','SGT2','SGT3'].includes(u))return'rk-s';
+  return'rk-c';
+}
+function rankWeight(r){return RANK_W[(r||'').toUpperCase()]??0;}
+function assignedSet(){const s=new Set();Object.values(assigns).forEach(a=>Object.values(a).forEach(v=>{if(v)s.add(v);}));return s;}
+function fillPct(apps){let t=0,f=0;apps.forEach(a=>{a.slots.filter(s=>s!=='Driver').forEach(s=>{t++;if(assigns[a.id]&&assigns[a.id][s])f++;});});return t?Math.round(f/t*100):0;}
+function appSt(a){return(assigns[a.id]&&assigns[a.id]['Paramedic'])?'alive':'empty';}
+function pctCol(pct){return pct===100?'var(--s-green)':pct>0?'var(--s-amber)':'var(--s-red)';}
+function stnName(id){const s=STNS.find(x=>x.id===id);return s?s.name+' · '+s.loc:'Unassigned';}
+function canEditStn(stnId){return isRDR||(isStnUser&&currentStationId===stnId);}
+
+function sortedPersons(){
+  const aset=assignedSet();const list=[...persons];const m=SORT_MODES[sortIdx].id;
+  if(m==='az')list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if(m==='za')list.sort((a,b)=>b.name.localeCompare(a.name));
+  else if(m==='rank-hi')list.sort((a,b)=>rankWeight(b.rank)-rankWeight(a.rank)||a.name.localeCompare(b.name));
+  else if(m==='rank-lo')list.sort((a,b)=>rankWeight(a.rank)-rankWeight(b.rank)||a.name.localeCompare(b.name));
+  else if(m==='asgn-1')list.sort((a,b)=>(aset.has(b.id)?1:0)-(aset.has(a.id)?1:0)||a.name.localeCompare(b.name));
+  else if(m==='asgn-0')list.sort((a,b)=>(aset.has(a.id)?1:0)-(aset.has(b.id)?1:0)||a.name.localeCompare(b.name));
+  return list;
+}
+function cycleSortMode(){sortIdx=(sortIdx+1)%SORT_MODES.length;refresh();}
+function clearSort(){sortIdx=0;refresh();}
+function updateSortUI(){
+  const m=SORT_MODES[sortIdx];const on=sortIdx!==0;
+  [['sortCycBtn','sortIcon','sortLabel'],['drawSortBtn','drawSortIcon','drawSortLabel']].forEach(([b,i,l])=>{
+    const btn=document.getElementById(b);if(!btn)return;
+    btn.className='sort-cyc'+(on?' on':'');
+    document.getElementById(i).textContent=m.icon;
+    document.getElementById(l).textContent=' '+m.label;
+  });
+  ['sortClrBtn','drawClrBtn'].forEach(id=>{const el=document.getElementById(id);if(el)el.hidden=!on;});
+  const mob=document.getElementById('mobSortBtn');if(mob){mob.textContent=m.icon+' '+m.label;mob.className='vtbtn'+(on?' on':'');}
+}
+
+// ─── RENDER STATS ──────────────────────────────────
+function renderStats(){
+  const aset=assignedSet();
+  const tS=appliances.reduce((s,a)=>s+a.slots.filter(sl=>sl!=='Driver').length,0);
+  const fS=Object.entries(assigns).reduce((s,[id,a])=>{const app=appliances.find(x=>x.id===id);if(!app)return s;return s+app.slots.filter(sl=>sl!=='Driver'&&a[sl]).length;},0);
+  const pct=tS?Math.round(fS/tS*100):0;const bc=pctCol(pct);
+  document.getElementById('statsBar').innerHTML=`
+    <div class="stat-item"><div class="stat-icon" style="background:rgba(59,130,246,0.12)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><rect x="1" y="3" width="22" height="13" rx="2"/><path d="M16 21H8M12 17v4"/></svg></div><div><div class="stat-num" style="color:var(--s-blue)">${appliances.length}</div><div class="stat-lbl">Appliances</div></div></div>
+    <div class="stat-item"><div class="stat-icon" style="background:rgba(168,85,247,0.12)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div class="stat-num" style="color:var(--s-purple)">${persons.length}</div><div class="stat-lbl">Personnel</div></div></div>
+    <div class="stat-item"><div class="stat-icon" style="background:rgba(34,197,94,0.12)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg></div><div><div class="stat-num" style="color:var(--s-green)">${aset.size}</div><div class="stat-lbl">Assigned</div></div></div>
+    <div class="stat-item" style="flex:1;min-width:120px"><div class="stat-icon" style="background:rgba(232,50,29,0.12)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="${bc}" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div style="flex:1;min-width:0"><div style="display:flex;align-items:baseline;gap:4px"><div class="stat-num" style="color:${bc}">${pct}%</div><div class="stat-lbl" style="margin-top:0">Para Coverage</div></div><div class="rbar-out"><div class="rbar-in" style="width:${pct}%;background:${bc}"></div></div></div></div>`;
+}
+
+function renderFilters(){
+  const mk=(cls)=>
+    `<button class="${cls}${filt==='all'?' on':''}" onclick="setF('all')"><span class="fn">All</span><span class="fl">Stns</span></button>`+
+    STNS.map(s=>`<button class="${cls}${filt===s.id?' on':''}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span></button>`).join('');
+  document.getElementById('filterRow').innerHTML=mk('fchip');
+  document.getElementById('mobFilterRow').innerHTML=mk('mob-fchip');
+}
+
+function renderRoster(){
+  const aset=assignedSet();
+  const canDrag=isRDR; // only RDR can drag people around
+  const avail=sortedPersons().filter(p=>!aset.has(p.id));
+  const html=avail.length
+    ?avail.map(p=>`<div class="pchip${canDrag?'':' readonly'}"${canDrag?` draggable="true" data-pid="${p.id}" id="pc_${p.id}" style="touch-action:none"`:''}>
+        <div class="av" style="background:${avCol(p.id)};width:22px;height:22px">${inits(p.name)}</div>
+        <span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span>
+        <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px">${p.name}</span>
+      </div>`).join('')
+    :`<div class="empty-r">All crew assigned ✓</div>`;
+  ['rosterList','drawerRosterList'].forEach(id=>{
+    const el=document.getElementById(id);if(!el)return;
+    el.innerHTML=html;
+    if(canDrag)el.querySelectorAll('.pchip').forEach(bindChipDrag);
+  });
+  const fab=document.getElementById('fabBadge');if(fab)fab.textContent=avail.length;
+  updateSortUI();
+}
+
+// ─── DRAG ──────────────────────────────────────────
+const ghost=document.getElementById('dragGhost');
+function showGhost(pid,x,y){
+  const p=persons.find(x=>x.id===pid);if(!p)return;
+  ghost.innerHTML=`<div class="av" style="background:${avCol(p.id)};width:20px;height:20px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span style="font-size:11px;white-space:nowrap">${p.name}</span>`;
+  ghost.classList.add('active');moveGhost(x,y);
+}
+function moveGhost(x,y){ghost.style.left=x+'px';ghost.style.top=y+'px';}
+function hideGhost(){ghost.classList.remove('active');}
+function setDragActive(on){document.getElementById('stnArea').classList.toggle('dragging-active',on);}
+function bindChipDrag(el){
+  el.addEventListener('dragstart',e=>{drag=el.dataset.pid;setTimeout(()=>el.classList.add('dragging'),0);setDragActive(true);const ei=new Image();e.dataTransfer.setDragImage(ei,0,0);showGhost(drag,e.clientX,e.clientY);});
+  el.addEventListener('dragend',()=>{el.classList.remove('dragging');drag=null;hideGhost();setDragActive(false);});
+  el.addEventListener('touchstart',e=>{touchPid=el.dataset.pid;el.classList.add('dragging');setDragActive(true);const t=e.touches[0];showGhost(touchPid,t.clientX,t.clientY);},{passive:true});
+  el.addEventListener('touchmove',e=>{const t=e.touches[0];moveGhost(t.clientX,t.clientY);document.querySelectorAll('.slot.dh').forEach(s=>s.classList.remove('dh'));const tgt=document.elementFromPoint(t.clientX,t.clientY);if(tgt){const sl=tgt.closest('[data-app][data-slot]');if(sl)sl.classList.add('dh');}},{passive:true});
+  el.addEventListener('touchend',e=>{el.classList.remove('dragging');setDragActive(false);hideGhost();document.querySelectorAll('.slot.dh').forEach(s=>s.classList.remove('dh'));const t=e.changedTouches[0];const tgt=document.elementFromPoint(t.clientX,t.clientY);if(tgt){const sl=tgt.closest('[data-app][data-slot]');if(sl)doAssign(sl.dataset.app,sl.dataset.slot,touchPid);}touchPid=null;},{passive:true});
+}
+document.addEventListener('dragover',e=>{if(drag)moveGhost(e.clientX,e.clientY);});
+function bindDrop(a){
+  if(!canEditStn(a.stn))return; // don't bind drop handlers for stations the user can't edit
+  document.querySelectorAll(`[data-app="${a.id}"][data-slot]`).forEach(slot=>{
+    slot.addEventListener('dragover',e=>{e.preventDefault();slot.classList.add('dh');});
+    slot.addEventListener('dragleave',e=>{if(!slot.contains(e.relatedTarget))slot.classList.remove('dh');});
+    slot.addEventListener('drop',e=>{e.preventDefault();slot.classList.remove('dh');doAssign(slot.dataset.app,slot.dataset.slot,drag);});
+  });
+}
+
+// ─── ASSIGN / UNASSIGN ─────────────────────────────
+function doAssign(appId,sl,pid){
+  if(!pid||!assigns[appId])return;
+  if(assigns[appId][sl])return;
+  if(Object.values(assigns[appId]).includes(pid))return;
+  assigns[appId][sl]=pid;
+  writeAssign(appId,sl,pid);
+  refresh();
+}
+function unassign(appId,sl){
+  assigns[appId][sl]=null;
+  writeAssign(appId,sl,null);
+  refresh();
+}
+
+// ─── AUTOCOMPLETE ──────────────────────────────────
+function onInput(inp){
+  const val=inp.value.trim().toLowerCase();const appId=inp.dataset.app,sl=inp.dataset.slot;
+  const ac=document.getElementById('ac_'+appId+'_'+sl.replace(/ /g,'_'));if(!ac)return;
+  if(val.length<1){ac.classList.remove('show');ac.innerHTML='';return;}
+  const aset=assignedSet();
+  const matches=persons.filter(p=>!aset.has(p.id)&&p.name.toLowerCase().includes(val)).slice(0,6);
+  if(!matches.length){ac.classList.remove('show');ac.innerHTML='';return;}
+  ac.innerHTML=matches.map(p=>`<div class="ac-item" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
+  ac.classList.add('show');activeAC={appId,sl,matches,idx:-1};
+}
+function onKey(e,inp){
+  if(!activeAC)return;const ac=document.getElementById('ac_'+activeAC.appId+'_'+activeAC.sl.replace(/ /g,'_'));if(!ac)return;
+  const items=ac.querySelectorAll('.ac-item');
+  if(e.key==='ArrowDown'){e.preventDefault();activeAC.idx=Math.min(activeAC.idx+1,items.length-1);items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();activeAC.idx=Math.max(activeAC.idx-1,0);items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));}
+  else if(e.key==='Enter'){
+    e.preventDefault();
+    if(activeAC.idx>=0&&activeAC.matches[activeAC.idx])pickPerson(activeAC.appId,activeAC.sl,activeAC.matches[activeAC.idx].id);
+    else if(activeAC.matches.length===1)pickPerson(activeAC.appId,activeAC.sl,activeAC.matches[0].id);
+    else{const val=inp.value.trim();if(val){const np=mkPerson(val,randRank(),'');persons.push(np);doAssign(activeAC.appId,activeAC.sl,np.id);activeAC=null;}}
+  }else if(e.key==='Escape'){ac.classList.remove('show');activeAC=null;}
+}
+function hideAC(inp,d){setTimeout(()=>{const ac=document.getElementById('ac_'+inp.dataset.app+'_'+inp.dataset.slot.replace(/ /g,'_'));if(ac)ac.classList.remove('show');},d);}
+function pickPerson(aId,sl,pid){if(assigns[aId][sl])return;if(Object.values(assigns[aId]).includes(pid))return;doAssign(aId,sl,pid);activeAC=null;}
+
+// ─── RENDER STATIONS ───────────────────────────────
+function renderStations(){
+  const area=document.getElementById('stnArea');area.innerHTML='';
+  STNS.forEach(stn=>{
+    if(filt!=='all'&&filt!==stn.id)return;
+    const apps=appliances.filter(a=>a.stn===stn.id);
+    const pct=fillPct(apps);const bc=pctCol(pct);
+    const badgeCls=pct===100?'sb-g':pct>0?'sb-a':'sb-r';
+    const canEdit=canEditStn(stn.id);
+    const block=document.createElement('div');block.className='stn-block';
+    const appsHtml=viewMode==='grid'
+      ?`<div class="agrid">${apps.map(a=>renderAmbGrid(a,canEdit)).join('')}</div>`
+      :`<div class="arow">${apps.map(a=>renderAmbRow(a,canEdit)).join('')}</div>`;
+    block.innerHTML=`<div class="stn-hd">
+      <div class="stn-num">${stn.id}</div>
+      <div class="stn-info"><div class="stn-name">${stn.name} · ${stn.loc}</div><div class="stn-sub">${apps.length} appliances${canEdit?' · <span style="color:var(--s-green);font-weight:600">editable</span>':''}</div></div>
+      <span class="stn-badge ${badgeCls}">${pct}% staffed</span>
+    </div><div class="stn-bar"><div class="stn-bar-fill" style="width:${pct}%;background:${bc}"></div></div>${appsHtml}`;
+    area.appendChild(block);
+    if(canEdit)apps.forEach(bindDrop);
+  });
+}
+function renderAmbGrid(a,canEdit){const t=APPTYPES[a.id]||'Ambulance';return`<div class="amb"><div class="amb-hd"><div><div class="amb-id">${a.id}</div><div class="amb-type">${t}</div></div><div class="sdot ${appSt(a)}"></div></div><div class="slots-grid">${a.slots.map(sl=>renderSlot(a,sl,canEdit)).join('')}</div></div>`;}
+function renderAmbRow(a,canEdit){const t=APPTYPES[a.id]||'Ambulance';return`<div class="ar-item"><div class="ar-hd"><div class="sdot ${appSt(a)}"></div><div><div class="amb-id">${a.id}</div><div class="amb-type">${t}</div></div></div><div class="ar-slots">${a.slots.map(sl=>`<div class="slw">${renderSlot(a,sl,canEdit)}</div>`).join('')}</div></div>`;}
+function renderSlot(a,sl,canEdit){
+  const pid=assigns[a.id]&&assigns[a.id][sl];
+  const p=pid?persons.find(x=>x.id===pid):null;
+  const isOpt=sl==='Driver';
+  // Station users only edit Paramedic slots (REDCON focus)
+  const editable=canEdit&&(!isStnUser||sl==='Paramedic');
+  return`<div class="slot${p?' filled':''}${!editable?' locked':''}" data-app="${a.id}" data-slot="${sl}" id="slot_${a.id}_${sl.replace(/ /g,'_')}">
+    <span class="slot-role">${sl}${isOpt?' ·opt':''}</span>
+    <div class="slot-input-wrap">
+      ${p
+        ?`<div class="person-inline"><div class="av" style="background:${avCol(p.id)};width:18px;height:18px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span class="pname">${p.name}</span>${editable?`<span class="rm" onclick="unassign('${a.id}','${sl}')">×</span>`:''}</div>`
+        :editable
+          ?`<input class="slot-input" data-app="${a.id}" data-slot="${sl}" placeholder="${isOpt?'Driver (opt)':'Drop or type…'}" autocomplete="off" oninput="onInput(this)" onkeydown="onKey(event,this)" onblur="hideAC(this,300)">`
+          :`<span style="font-size:10px;color:var(--tx3)">—</span>`
+      }
+      ${editable?`<div class="autocomplete" id="ac_${a.id}_${sl.replace(/ /g,'_')}"></div>`:''}
+    </div>
+  </div>`;
+}
+
+// ─── EDIT PANEL (RDR only) ─────────────────────────
+function openEditPanel(){if(!isRDR)return;document.getElementById('editPanel').classList.add('open');renderEpList();document.getElementById('epName').focus();}
+function closeEditPanel(){document.getElementById('editPanel').classList.remove('open');epEditId=null;}
+document.getElementById('editPanel').addEventListener('click',e=>{if(e.target===document.getElementById('editPanel'))closeEditPanel();});
+
+function renderEpList(){
+  const aset=assignedSet();
+  const q=(document.getElementById('epSearch').value||'').toLowerCase();
+  const filtered=persons.filter(p=>!q||p.name.toLowerCase().includes(q)||p.rank.toLowerCase().includes(q));
+  document.getElementById('epCount').textContent=filtered.length+' / '+persons.length;
+  document.getElementById('epSubtitle').textContent=persons.length+' total · '+aset.size+' assigned · '+(persons.length-aset.size)+' available';
+  if(!filtered.length){document.getElementById('epList').innerHTML=`<div class="ep-empty"><div style="font-size:32px;margin-bottom:8px">🔍</div>No matches.</div>`;return;}
+  document.getElementById('epList').innerHTML=filtered.map(p=>{
+    const assigned=aset.has(p.id);
+    if(epEditId===p.id)return`<div class="ep-card editing" id="epc_${p.id}">
+      <div class="av" style="background:${avCol(p.id)};width:32px;height:32px;font-size:11px;flex-shrink:0">${inits(p.name)}</div>
+      <div style="flex:1;min-width:0">
+        <div class="ep-inline-edit">
+          <input class="ep-ie-input" id="ie_name_${p.id}" value="${p.name}" placeholder="Name" style="flex:2">
+          <select class="ep-ie-input" id="ie_rank_${p.id}" style="flex:0 0 90px">${['SGT','SSG','WO','LTA','CPT','MAJ','CPL'].map(r=>`<option${p.rank===r?' selected':''}>${r}</option>`).join('')}</select>
+          <select class="ep-ie-input" id="ie_stn_${p.id}" style="flex:0 0 110px"><option value="">Unassigned</option>${STNS.map(s=>`<option value="${s.id}"${p.stn===s.id?' selected':''}>${s.name}</option>`).join('')}</select>
+        </div>
+        <div style="display:flex;gap:5px;margin-top:6px">
+          <button class="ep-ie-save" onclick="epSaveEdit('${p.id}')">Save</button>
+          <button class="ep-ie-cancel" onclick="epCancelEdit()">Cancel</button>
+        </div>
+      </div></div>`;
+    return`<div class="ep-card" id="epc_${p.id}">
+      <div class="av" style="background:${avCol(p.id)};width:32px;height:32px;font-size:11px;flex-shrink:0">${inits(p.name)}</div>
+      <div class="ep-card-info">
+        <div class="ep-card-name">${p.name}</div>
+        <div class="ep-card-meta"><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span class="ep-card-stn">${stnName(p.stn)}</span><span class="ep-sdot ${assigned?'on':'off'}"></span><span class="ep-card-status">${assigned?'On duty':'Available'}</span></div>
+      </div>
+      <div class="ep-card-actions">
+        <button class="ep-edit-btn" onclick="epStartEdit('${p.id}')">✏</button>
+        <button class="ep-del-btn" onclick="epDelete('${p.id}')">🗑</button>
+      </div></div>`;
+  }).join('');
+}
+function epAdd(){
+  const n=document.getElementById('epName').value.trim();const r=document.getElementById('epRank').value;const s=document.getElementById('epStn').value;
+  if(!n)return document.getElementById('epName').focus();
+  const p=mkPerson(n,r,s);persons.push(p);
+  document.getElementById('epName').value='';document.getElementById('epName').focus();
+  writePersonnel(persons);renderEpList();refresh();
+}
+function epAddRandom(){const p=mkPerson(randName(),randRank(),STNS[~~(Math.random()*STNS.length)].id);persons.push(p);writePersonnel(persons);renderEpList();refresh();}
+function epAddRandomBatch(n){for(let i=0;i<n;i++)persons.push(mkPerson(randName(),randRank(),STNS[~~(Math.random()*STNS.length)].id));writePersonnel(persons);renderEpList();refresh();}
+function epStartEdit(id){epEditId=id;renderEpList();document.getElementById('ie_name_'+id)?.focus();}
+function epCancelEdit(){epEditId=null;renderEpList();}
+function epSaveEdit(id){
+  const p=persons.find(x=>x.id===id);if(!p)return;
+  p.name=document.getElementById('ie_name_'+id).value.trim()||p.name;
+  p.rank=document.getElementById('ie_rank_'+id).value;
+  p.stn=document.getElementById('ie_stn_'+id).value;
+  epEditId=null;writePersonnel(persons);renderEpList();refresh();
+}
+function epDelete(id){
+  persons=persons.filter(p=>p.id!==id);
+  Object.values(assigns).forEach(a=>{Object.keys(a).forEach(s=>{if(a[s]===id)a[s]=null;});});
+  writePersonnel(persons);renderEpList();refresh();
+}
+function epClearUnassigned(){
+  const aset=assignedSet();persons=persons.filter(p=>aset.has(p.id));
+  writePersonnel(persons);renderEpList();refresh();
+}
+document.getElementById('epName').addEventListener('keydown',e=>{if(e.key==='Enter')epAdd();});
+
+// ─── AUDIT LOG (RDR only) ─────────────────────────
+function openAuditPanel(){
+  if(!isRDR)return;
+  document.getElementById('auditPanel').classList.add('open');
+  loadAuditLog();
+}
+function closeAuditPanel(){document.getElementById('auditPanel').classList.remove('open');}
+document.getElementById('auditPanel').addEventListener('click',e=>{if(e.target===document.getElementById('auditPanel'))closeAuditPanel();});
+
+async function loadAuditLog(){
+  const {db,ref,get}=window._firebase;
+  const list=document.getElementById('auditList');
+  list.innerHTML='<div class="audit-empty">Loading…</div>';
+  try{
+    const snap=await get(ref(db,'audit'));
+    if(!snap.exists()){list.innerHTML='<div class="audit-empty">No audit entries yet.</div>';return;}
+    const entries=Object.values(snap.val()).sort((a,b)=>b.ts-a.ts).slice(0,100);
+    const STN_COLORS={'41':'rgba(232,50,29,0.15)','42':'rgba(59,130,246,0.15)','43':'rgba(34,197,94,0.15)','44':'rgba(245,158,11,0.15)','45':'rgba(168,85,247,0.15)','RDR':'rgba(239,68,68,0.2)'};
+    const STN_TEXT={'41':'#f87171','42':'#60a5fa','43':'#4ade80','44':'#fbbf24','45':'#c084fc','RDR':'#f87171'};
+    list.innerHTML=entries.map(e=>{
+      const ts=new Date(e.ts).toLocaleString('en-GB',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+      const stnCol=STN_COLORS[e.stationId]||'rgba(255,255,255,0.05)';
+      const stnTx=STN_TEXT[e.stationId]||'#8b93a8';
+      let text='';
+      if(e.event==='login')text=`<b>Signed in</b> as ${e.stationId}`;
+      else{
+        const person=persons.find(p=>p.id===e.personId);
+        const pname=person?`<b>${person.name}</b>`:`<span class="dim">unknown</span>`;
+        text=e.action==='assign'
+          ?`Assigned ${pname} → ${e.appId} (${e.slot})`
+          :`Removed ${pname} from ${e.appId} (${e.slot})`;
+      }
+      return`<div class="audit-entry">
+        <span class="audit-stn-badge" style="background:${stnCol};color:${stnTx}">${e.stationId}</span>
+        <div style="flex:1"><div class="audit-text">${text}</div><div class="audit-ts">${ts}</div></div>
+      </div>`;
+    }).join('');
+  }catch(err){list.innerHTML=`<div class="audit-empty">Failed to load: ${err.message}</div>`;}
+}
+
+// ─── MISC ──────────────────────────────────────────
+function setF(f){filt=f;refresh();}
+function setView(v){viewMode=v;document.getElementById('viewGrid').className='vtbtn'+(v==='grid'?' on':'');document.getElementById('viewRow').className='vtbtn'+(v==='row'?' on':'');renderStations();}
+function openM(id){document.getElementById(id).classList.add('open');}
+function closeM(id){document.getElementById(id).classList.remove('open');}
+function saveApp(){
+  if(!isRDR)return;
+  const id=document.getElementById('maId').value.trim().toUpperCase();
+  const type=document.getElementById('maType').value.trim();const stn=document.getElementById('maStn').value;
+  if(!id||!stn)return;if(appliances.find(a=>a.id===id)){alert('ID exists');return;}
+  APPTYPES[id]=type||'Ambulance';appliances.push({id,stn,slots:['Paramedic','Driver']});assigns[id]={Paramedic:null,Driver:null};
+  document.getElementById('maId').value='';document.getElementById('maType').value='';closeM('aModal');refresh();
+}
+function toggleDark(){dark=!dark;document.documentElement.classList.toggle('lt',!dark);document.getElementById('themeBtnEl').textContent=dark?'☾':'☀';}
+function openDrawer(){document.getElementById('crewDrawer').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
+function closeDrawer(){document.getElementById('crewDrawer').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
+function setShift(){const h=new Date().getHours();const b=document.getElementById('shiftBadge');b.textContent=h<18?'AM Shift':'PM Shift';b.className='shift-tag '+(h<18?'shift-am':'shift-pm');}
+function setDate(){document.getElementById('dateLabel').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}
+function initSel(){['maStn','epStn'].forEach(id=>{const s=document.getElementById(id);if(!s)return;while(s.options.length>1)s.remove(1);STNS.forEach(st=>{const o=document.createElement('option');o.value=st.id;o.textContent=st.name+' · '+st.loc;s.appendChild(o);});});}
+
+function refresh(){renderStats();renderFilters();renderRoster();renderStations();}
+
+// ─── APPLIANCE DEFINITIONS (local, not Firebase) ──
+appliances=[
+  {id:'A411',stn:'41',slots:['Paramedic','Driver']},{id:'A412',stn:'41',slots:['Paramedic','Driver']},
+  {id:'A413',stn:'41',slots:['Paramedic','Driver']},{id:'A414',stn:'41',slots:['Paramedic','Driver']},
+  {id:'A415',stn:'41',slots:['Paramedic','Driver']},{id:'PA411',stn:'41',slots:['Paramedic']},
+  {id:'PA412',stn:'41',slots:['Paramedic']},{id:'PA413',stn:'41',slots:['Paramedic']},
+  {id:'A421',stn:'42',slots:['Paramedic','Driver']},{id:'PA421',stn:'42',slots:['Paramedic']},
+  {id:'A431',stn:'43',slots:['Paramedic','Driver']},{id:'A432',stn:'43',slots:['Paramedic','Driver']},
+  {id:'A433',stn:'43',slots:['Paramedic','Driver']},{id:'A434',stn:'43',slots:['Paramedic','Driver']},
+  {id:'A435',stn:'43',slots:['Paramedic','Driver']},{id:'PA431',stn:'43',slots:['Paramedic']},
+  {id:'PA432',stn:'43',slots:['Paramedic']},{id:'A441',stn:'44',slots:['Paramedic','Driver']},
+  {id:'A442',stn:'44',slots:['Paramedic','Driver']},{id:'A443',stn:'44',slots:['Paramedic','Driver']},
+  {id:'A444',stn:'44',slots:['Paramedic','Driver']},{id:'A445',stn:'44',slots:['Paramedic','Driver']},
+  {id:'A446',stn:'44',slots:['Paramedic','Driver']},{id:'PA441',stn:'44',slots:['Paramedic']},
+  {id:'PA442',stn:'44',slots:['Paramedic']},{id:'PA443',stn:'44',slots:['Paramedic']},
+  {id:'PA444',stn:'44',slots:['Paramedic']},{id:'PA445',stn:'44',slots:['Paramedic']},
+  {id:'A451',stn:'45',slots:['Paramedic','Driver']},{id:'PA451',stn:'45',slots:['Paramedic']},
+];
+appliances.forEach(a=>{if(!assigns[a.id]){assigns[a.id]={};a.slots.forEach(s=>{assigns[a.id][s]=null;})}});
+
+// ─── BOOT ──────────────────────────────────────────
+setDate();setShift();initSel();buildPinScreen();refresh();
+setInterval(setShift,60000);
+
+window.addEventListener('firebaseReady', async () => {
+  const { auth } = window._firebase;
+  try {
+    await signInAnonymously(auth);
+  } catch(e) {
+    document.getElementById('loadingScreen').innerHTML=`<div class="screen-logo">⚠️</div><div class="screen-title">Firebase Error</div><div class="screen-sub" style="color:var(--s-red)">${e.message}<br><br>Check your firebaseConfig in the HTML and ensure Anonymous Auth is enabled.</div>`;
+    return;
+  }
+  onAuthStateChanged(auth, user => {
+    currentUser = user;
+    if (user) {
+      document.getElementById('loadingScreen').classList.add('hidden');
+      document.getElementById('btnStnLogin').style.display = 'flex';
+      initFirebaseListeners();
+    }
+  });
+});
+</script>
+</body>
+</html>
