@@ -358,7 +358,43 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .pname{font-size:11px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm{cursor:pointer;color:var(--tx3);font-size:14px;padding:1px 4px;border-radius:3px;line-height:1;flex-shrink:0;transition:color .1s}
 .rm:hover{color:var(--s-red)}
-/* ─── SYNC INDICATOR ─────────────────────────────── */
+/* ─── TOAST ───────────────────────────────────────── */
+#toast{
+  position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--surf3);border:1px solid var(--bdr2);
+  border-radius:10px;padding:10px 18px;
+  font-size:12px;font-weight:500;color:var(--tx);
+  box-shadow:0 8px 30px rgba(0,0,0,.45);
+  z-index:300;pointer-events:none;
+  opacity:0;transition:opacity .2s,transform .2s;
+  white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ─── SIGN-IN BANNER ──────────────────────────────── */
+.signin-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:10px 16px;
+  background:linear-gradient(90deg,rgba(232,50,29,0.12),rgba(232,50,29,0.06));
+  border-bottom:1px solid rgba(232,50,29,0.25);
+  flex-shrink:0;
+}
+.signin-banner-text{
+  display:flex;align-items:center;gap:8px;
+  font-size:12px;color:var(--tx2);
+}
+.signin-banner-text strong{color:var(--tx);font-weight:600}
+.signin-banner-icon{font-size:16px;flex-shrink:0}
+.signin-banner-btn{
+  height:32px;padding:0 16px;
+  background:var(--acc);border:none;border-radius:8px;
+  color:#fff;font-size:12px;font-weight:600;font-family:var(--font-ui);
+  cursor:pointer;white-space:nowrap;flex-shrink:0;
+  transition:background .15s,transform .1s;
+  display:flex;align-items:center;gap:6px;
+}
+.signin-banner-btn:hover{background:var(--acc2);transform:translateY(-1px)}
+.signin-banner-btn:active{transform:none}
 .sync-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;transition:background .3s}
 .sync-dot.ok{background:var(--s-green)}
 .sync-dot.pending{background:var(--s-amber);animation:syncPulse 1s ease-in-out infinite}
@@ -519,6 +555,8 @@ body{min-height:100vh;display:flex;flex-direction:column}
       <div class="pin-dot" id="d1"></div>
       <div class="pin-dot" id="d2"></div>
       <div class="pin-dot" id="d3"></div>
+      <div class="pin-dot" id="d4"></div>
+      <div class="pin-dot" id="d5"></div>
     </div>
     <div class="numpad" id="numpad"></div>
     <button class="pin-submit" id="pinSubmit" onclick="submitPin()" disabled>
@@ -568,7 +606,21 @@ body{min-height:100vh;display:flex;flex-direction:column}
   <button class="theme-btn" onclick="toggleDark()" id="themeBtnEl">☾</button>
 </header>
 
+<div id="toast"></div>
+
 <div class="stats-bar" id="statsBar"></div>
+
+<!-- Sign-in banner — visible when not authenticated -->
+<div class="signin-banner" id="signinBanner">
+  <div class="signin-banner-text">
+    <span class="signin-banner-icon">🔒</span>
+    <span><strong>Read-only mode.</strong> Sign in with your station PIN to update paramedic assignments.</span>
+  </div>
+  <button class="signin-banner-btn" onclick="showPinScreen()">
+    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+    Sign in
+  </button>
+</div>
 
 <div class="body">
   <div class="sidebar">
@@ -806,12 +858,12 @@ function selectPinStn(id){
 
 function npPress(k){
   if(k==='⌫'){pinBuffer=pinBuffer.slice(0,-1);}
-  else if(pinBuffer.length<4){pinBuffer+=k;}
+  else if(pinBuffer.length<6){pinBuffer+=k;}
   updatePinDots();checkPinReady();
 }
 
 function updatePinDots(){
-  for(let i=0;i<4;i++){
+  for(let i=0;i<6;i++){
     const d=document.getElementById('d'+i);
     if(d)d.classList.toggle('filled',i<pinBuffer.length);
   }
@@ -842,7 +894,7 @@ const STATION_PINS = {
   "44": "44",
   "45": "45",
 };
-const RDR_PIN = "YOUR_RDR_PIN_HERE"; // ← change this before deploying
+const RDR_PIN = "090807";
 
 async function submitPin() {
   if (!pinSelectedStn || pinBuffer.length < 2) return;
@@ -895,9 +947,20 @@ async function submitPin() {
   checkPinReady();
 }
 
+// ─── TOAST ─────────────────────────────────────────
+let toastTimer=null;
+function showToast(msg,duration=2800){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),duration);
+}
+
 function updateAuthUI(){
+  const banner=document.getElementById('signinBanner');
   const badge=document.getElementById('authBadge');
   if(!currentStationId){
+    banner.style.display='flex';
     badge.textContent='Not signed in';badge.className='auth-badge none';
     document.getElementById('btnPersonnel').style.display='none';
     document.getElementById('btnAudit').style.display='none';
@@ -905,6 +968,7 @@ function updateAuthUI(){
     document.getElementById('btnStnLogin').style.display='flex';
     document.getElementById('sbEditBtn').style.display='none';
   }else if(isRDR){
+    banner.style.display='none';
     badge.textContent='🔴 RDR';badge.className='auth-badge rdr';
     document.getElementById('btnPersonnel').style.display='flex';
     document.getElementById('btnAudit').style.display='flex';
@@ -912,6 +976,7 @@ function updateAuthUI(){
     document.getElementById('btnStnLogin').style.display='none';
     document.getElementById('sbEditBtn').style.display='block';
   }else{
+    banner.style.display='none';
     const stn=STNS.find(s=>s.id===currentStationId);
     badge.textContent='📍 '+stn?.name;badge.className='auth-badge stn';
     document.getElementById('btnPersonnel').style.display='none';
@@ -1124,9 +1189,22 @@ function moveGhost(x,y){ghost.style.left=x+'px';ghost.style.top=y+'px';}
 function hideGhost(){ghost.classList.remove('active');}
 function setDragActive(on){document.getElementById('stnArea').classList.toggle('dragging-active',on);}
 function bindChipDrag(el){
-  el.addEventListener('dragstart',e=>{drag=el.dataset.pid;setTimeout(()=>el.classList.add('dragging'),0);setDragActive(true);const ei=new Image();e.dataTransfer.setDragImage(ei,0,0);showGhost(drag,e.clientX,e.clientY);});
+  el.addEventListener('dragstart',e=>{
+    if(!currentStationId){
+      e.preventDefault();
+      showToast('🔒 Sign in with your station PIN to assign crew');
+      showPinScreen();
+      return;
+    }
+    drag=el.dataset.pid;setTimeout(()=>el.classList.add('dragging'),0);setDragActive(true);const ei=new Image();e.dataTransfer.setDragImage(ei,0,0);showGhost(drag,e.clientX,e.clientY);});
   el.addEventListener('dragend',()=>{el.classList.remove('dragging');drag=null;hideGhost();setDragActive(false);});
-  el.addEventListener('touchstart',e=>{touchPid=el.dataset.pid;el.classList.add('dragging');setDragActive(true);const t=e.touches[0];showGhost(touchPid,t.clientX,t.clientY);},{passive:true});
+  el.addEventListener('touchstart',e=>{
+    if(!currentStationId){
+      showToast('🔒 Sign in with your station PIN to assign crew');
+      showPinScreen();
+      return;
+    }
+    touchPid=el.dataset.pid;el.classList.add('dragging');setDragActive(true);const t=e.touches[0];showGhost(touchPid,t.clientX,t.clientY);},{passive:true});
   el.addEventListener('touchmove',e=>{const t=e.touches[0];moveGhost(t.clientX,t.clientY);document.querySelectorAll('.slot.dh').forEach(s=>s.classList.remove('dh'));const tgt=document.elementFromPoint(t.clientX,t.clientY);if(tgt){const sl=tgt.closest('[data-app][data-slot]');if(sl)sl.classList.add('dh');}},{passive:true});
   el.addEventListener('touchend',e=>{el.classList.remove('dragging');setDragActive(false);hideGhost();document.querySelectorAll('.slot.dh').forEach(s=>s.classList.remove('dh'));const t=e.changedTouches[0];const tgt=document.elementFromPoint(t.clientX,t.clientY);if(tgt){const sl=tgt.closest('[data-app][data-slot]');if(sl)doAssign(sl.dataset.app,sl.dataset.slot,touchPid);}touchPid=null;},{passive:true});
 }
