@@ -1118,9 +1118,12 @@ async function submitPin() {
 
 // ─── TOAST ─────────────────────────────────────────
 let toastTimer=null;
-function showToast(msg,duration=2800){
+function showToast(msg,duration=2800,type=''){
   const t=document.getElementById('toast');
-  t.textContent=msg;t.classList.add('show');
+  t.textContent=msg;
+  t.className='';
+  if(type)t.classList.add(type);
+  t.classList.add('show');
   clearTimeout(toastTimer);
   toastTimer=setTimeout(()=>t.classList.remove('show'),duration);
 }
@@ -1198,6 +1201,15 @@ function initFirebaseListeners(){
       renderStats();renderStations();
     });
   });
+
+  // CFS statuses
+  onValue(ref(db,'cfs'),snap=>{
+    cfsStatuses=snap.exists()?snap.val():{};
+    renderStations();
+  });
+
+  // Run shift reset check after listeners are set up
+  checkShiftReset();
 }
 
 function seedInitialData(){
@@ -1237,7 +1249,7 @@ async function writeAssign(appId,slot,pid){
   // Permission check client-side (server rules enforce this too)
   if(!currentStationId)return;
   if(isStnUser&&stnId!==currentStationId){
-    alert('You can only edit your own station ('+currentStationId+')');return;
+    showToast('⛔ Cannot edit Stn '+stnId+' — you are signed in as Stn '+currentStationId,3000,'err-t');return;
   }
   pendingWrites++;setSyncState('pending','Saving…');
   try{
@@ -1324,11 +1336,19 @@ function renderStats(){
 }
 
 function renderFilters(){
-  const mk=(cls)=>
-    `<button class="${cls}${filt==='all'?' on':''}" onclick="setF('all')"><span class="fn">All</span><span class="fl">Stns</span></button>`+
-    STNS.map(s=>`<button class="${cls}${filt===s.id?' on':''}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span></button>`).join('');
-  document.getElementById('filterRow').innerHTML=mk('fchip');
-  document.getElementById('mobFilterRow').innerHTML=mk('mob-fchip');
+  const sidebarHtml=
+    `<button class="fchip${filt==='all'?' on':''}" onclick="setF('all')"><span class="fn">All</span><span class="fl">Stns</span></button>`+
+    STNS.map(s=>{
+      const isEditing=isStnUser&&s.id===currentStationId;
+      const cls='fchip'+(filt===s.id?' on':'')+(isEditing?' editing-stn':'');
+      return`<button class="${cls}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span>${isEditing?`<span class="fchip-edit-tag">✏ EDITING</span>`:''}</button>`;
+    }).join('');
+  document.getElementById('filterRow').innerHTML=sidebarHtml;
+  // mobile chips — no edit badge (space constrained)
+  const mobHtml=
+    `<button class="mob-fchip${filt==='all'?' on':''}" onclick="setF('all')"><span class="fn">All</span><span class="fl">Stns</span></button>`+
+    STNS.map(s=>`<button class="mob-fchip${filt===s.id?' on':''+(isStnUser&&s.id===currentStationId?' editing-stn':'')}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span></button>`).join('');
+  document.getElementById('mobFilterRow').innerHTML=mobHtml;
 }
 
 function renderRoster(){
@@ -1418,7 +1438,13 @@ function onInput(inp){
   const ac=document.getElementById('ac_'+appId+'_'+sl.replace(/ /g,'_'));if(!ac)return;
   if(val.length<1){ac.classList.remove('show');ac.innerHTML='';return;}
   const aset=assignedSet();
-  const matches=persons.filter(p=>!aset.has(p.id)&&p.name.toLowerCase().includes(val)).slice(0,6);
+  // Only suggest crew from the same station as this appliance
+  const stnId=appliances.find(x=>x.id===appId)?.stn;
+  const matches=persons.filter(p=>
+    !aset.has(p.id)&&
+    p.name.toLowerCase().includes(val)&&
+    (!stnId||!p.stn||p.stn===stnId)  // match station, or allow unassigned (no home stn)
+  ).slice(0,6);
   if(!matches.length){ac.classList.remove('show');ac.innerHTML='';return;}
   ac.innerHTML=matches.map((p,i)=>`<div class="ac-item${i===0?' sel':''}" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
   // Position fixed relative to the input element
@@ -1453,6 +1479,69 @@ function onKey(e,inp){
 function hideAC(inp,d){setTimeout(()=>{const ac=document.getElementById('ac_'+inp.dataset.app+'_'+inp.dataset.slot.replace(/ /g,'_'));if(ac)ac.classList.remove('show');},d);}
 function pickPerson(aId,sl,pid){if(assigns[aId][sl])return;if(Object.values(assigns[aId]).includes(pid))return;doAssign(aId,sl,pid);activeAC=null;}
 
+// ─── RENDER CFS PANEL ──────────────────────────────
+function renderCFSPanel(stn){
+  const roles=CFS_ROLES[stn.id];
+  if(!roles||!roles.length)return'';
+  const isOpen=!!cfsOpen[stn.id];
+  const canEditCFS=isRDR||(isStnUser&&currentStationId===stn.id);
+  const rolesHtml=roles.map(role=>{
+    // readFrom: pull status from another station
+    const srcStn=role.readFrom||stn.id;
+    const status=(cfsStatuses[srcStn]&&cfsStatuses[srcStn][role.key])||'';
+    const dotCls=cfsDotClass(status);
+    const readOnly=!!role.readFrom||!canEditCFS;
+    const selectHtml=readOnly
+      ?`<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--tx2);min-width:100px;text-align:right">${status||'—'}</span>`
+      :`<select class="cfs-status-sel" onchange="writeCFS('${srcStn}','${role.key}',this.value)">
+          <option value="">— Status —</option>
+          ${CFS_STATUSES.map(s=>`<option value="${s}"${status===s?' selected':''}>${s}</option>`).join('')}
+        </select>`;
+    return`<div class="cfs-role-card">
+      <div class="cfs-sdot ${dotCls}"></div>
+      <div class="cfs-role-label">
+        <div class="cfs-role-name">${role.label}</div>
+        ${role.note?`<div class="cfs-role-note">${role.note}</div>`:''}
+      </div>
+      ${selectHtml}
+    </div>`;
+  }).join('');
+  return`<button class="cfs-toggle-btn${isOpen?' open':''}" id="cfs-btn-${stn.id}" onclick="toggleCFSPanel('${stn.id}')">
+    🪖 CFS <span class="cfs-arrow">▾</span>
+  </button>`;
+}
+
+function renderCFSPanelBody(stn){
+  const roles=CFS_ROLES[stn.id];
+  if(!roles||!roles.length)return'';
+  const isOpen=!!cfsOpen[stn.id];
+  const canEditCFS=isRDR||(isStnUser&&currentStationId===stn.id);
+  const rolesHtml=roles.map(role=>{
+    const srcStn=role.readFrom||stn.id;
+    const status=(cfsStatuses[srcStn]&&cfsStatuses[srcStn][role.key])||'';
+    const dotCls=cfsDotClass(status);
+    const readOnly=!!role.readFrom||!canEditCFS;
+    const selectHtml=readOnly
+      ?`<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--tx2);min-width:100px;text-align:right">${status||'—'}</span>`
+      :`<select class="cfs-status-sel" onchange="writeCFS('${srcStn}','${role.key}',this.value)">
+          <option value="">— Status —</option>
+          ${CFS_STATUSES.map(s=>`<option value="${s}"${status===s?' selected':''}>${s}</option>`).join('')}
+        </select>`;
+    return`<div class="cfs-role-card">
+      <div class="cfs-sdot ${dotCls}"></div>
+      <div class="cfs-role-label">
+        <div class="cfs-role-name">${role.label}</div>
+        ${role.note?`<div class="cfs-role-note">${role.note}</div>`:''}
+      </div>
+      ${selectHtml}
+    </div>`;
+  }).join('');
+  return`<div class="cfs-panel${isOpen?' open':''}" id="cfs-panel-${stn.id}">
+    <div class="cfs-panel-title">CFS Commander &amp; Key Personnel</div>
+    <div class="cfs-roles">${rolesHtml}</div>
+  </div>`;
+}
+
 // ─── RENDER STATIONS ───────────────────────────────
 function renderStations(){
   const area=document.getElementById('stnArea');area.innerHTML='';
@@ -1462,6 +1551,7 @@ function renderStations(){
     const pct=fillPct(apps);const bc=pctCol(pct);
     const badgeCls=pct===100?'sb-g':pct>0?'sb-a':'sb-r';
     const canEdit=canEditStn(stn.id);
+    const hasCFS=!!(CFS_ROLES[stn.id]&&CFS_ROLES[stn.id].length);
     const block=document.createElement('div');block.className='stn-block';
     const appsHtml=viewMode==='grid'
       ?`<div class="agrid">${apps.map(a=>renderAmbGrid(a,canEdit)).join('')}</div>`
@@ -1469,8 +1559,13 @@ function renderStations(){
     block.innerHTML=`<div class="stn-hd">
       <div class="stn-num">${stn.id}</div>
       <div class="stn-info"><div class="stn-name">${stn.name} · ${stn.loc}</div><div class="stn-sub">${apps.length} appliances${canEdit?' · <span style="color:var(--s-green);font-weight:600">editable</span>':''}</div></div>
-      <span class="stn-badge ${badgeCls}">${pct}% staffed</span>
-    </div><div class="stn-bar"><div class="stn-bar-fill" style="width:${pct}%;background:${bc}"></div></div>${appsHtml}`;
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        ${hasCFS?renderCFSPanel(stn):''}
+        <span class="stn-badge ${badgeCls}">${pct}% staffed</span>
+      </div>
+    </div><div class="stn-bar"><div class="stn-bar-fill" style="width:${pct}%;background:${bc}"></div></div>
+    ${hasCFS?renderCFSPanelBody(stn):''}
+    ${appsHtml}`;
     area.appendChild(block);
     if(canEdit)apps.forEach(bindDrop);
   });
@@ -1606,7 +1701,13 @@ async function loadAuditLog(){
 }
 
 // ─── MISC ──────────────────────────────────────────
-function setF(f){filt=f;refresh();}
+function setF(f){
+  // Cross-station view alert: station users can VIEW other stations, but show a reminder
+  if(isStnUser&&f!=='all'&&f!==currentStationId){
+    showToast('👁 Viewing Stn '+f+' — edits locked to your Stn '+currentStationId,3000,'warn');
+  }
+  filt=f;refresh();
+}
 function setView(v){viewMode=v;document.getElementById('viewGrid').className='vtbtn'+(v==='grid'?' on':'');document.getElementById('viewRow').className='vtbtn'+(v==='row'?' on':'');renderStations();}
 function openM(id){document.getElementById(id).classList.add('open');}
 function closeM(id){document.getElementById(id).classList.remove('open');}
@@ -1621,11 +1722,123 @@ function saveApp(){
 function toggleDark(){dark=!dark;document.documentElement.classList.toggle('lt',!dark);document.getElementById('themeBtnEl').textContent=dark?'☾':'☀';}
 function openDrawer(){document.getElementById('crewDrawer').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
 function closeDrawer(){document.getElementById('crewDrawer').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
-function setShift(){const h=new Date().getHours();const b=document.getElementById('shiftBadge');b.textContent=h<18?'AM Shift':'PM Shift';b.className='shift-tag '+(h<18?'shift-am':'shift-pm');}
+
+// ─── SHIFT LOGIC ───────────────────────────────────
+// AM: 0800-2000  |  PM: 2000-0800
+// Prep windows open 1hr early: AM prep from 0700, PM prep from 1900
+function getShiftInfo(){
+  const now=new Date();const h=now.getHours();
+  const dateStr=now.toISOString().slice(0,10);
+  // PM window: h >= 19 (1900 prep) or h < 7 (still in overnight PM)
+  const isPM=(h>=19||h<7);
+  const shift=isPM?'PM':'AM';
+  // For date key: if h<7 the PM shift started yesterday
+  const keyDate=(!isPM)?dateStr:
+    (h>=19)?dateStr:new Date(now-86400000).toISOString().slice(0,10);
+  const key=keyDate+'-'+shift;
+  // Prep window flags
+  const isAMprep=(h===7);   // 0700-0759
+  const isPMprep=(h===19);  // 1900-1959
+  const isPrep=isAMprep||isPMprep;
+  return{shift,key,isPrep,isAMprep,isPMprep,dateStr};
+}
+
+function setShift(){
+  const {shift,isPrep}=getShiftInfo();
+  const b=document.getElementById('shiftBadge');
+  b.textContent=(shift==='AM'?'AM Shift 0800':'PM Shift 2000')+(isPrep?' · Prep':'');
+  b.className='shift-tag '+(shift==='AM'?'shift-am':'shift-pm');
+  // Update shift prep banner
+  const banner=document.getElementById('shiftPrepBanner');
+  const pill=document.getElementById('shiftKeyPill');
+  const msg=document.getElementById('shiftPrepMsg');
+  if(isPrep){
+    const next=shift==='AM'?'AM (0800)':'PM (2000)';
+    banner.classList.remove('hidden');
+    msg.textContent=`Preparing for ${next} shift — roster has been cleared for the new shift.`;
+    pill.textContent=shift+' SHIFT';
+    pill.className='shift-key-pill prep';
+  }else{
+    banner.classList.add('hidden');
+  }
+}
+
+// Checks and performs a shift reset if the shift key has changed
+async function checkShiftReset(){
+  if(!window._firebase)return;
+  const{db,ref,set,get}=window._firebase;
+  const{key}=getShiftInfo();
+  try{
+    const snap=await get(ref(db,'meta/shiftKey'));
+    const stored=snap.exists()?snap.val():null;
+    if(stored!==key){
+      // Shift has changed — reset all roster assignments
+      console.log('[Shift] Key changed',stored,'→',key,'— resetting roster');
+      const emptyRoster={};
+      STNS.forEach(stn=>{
+        emptyRoster[stn.id]={};
+        appliances.filter(a=>a.stn===stn.id).forEach(a=>{
+          emptyRoster[stn.id][a.id]={};
+          a.slots.forEach(sl=>{emptyRoster[stn.id][a.id][sl]=null;});
+        });
+      });
+      // Clear local assigns
+      appliances.forEach(a=>{assigns[a.id]={};a.slots.forEach(s=>{assigns[a.id][s]=null;});});
+      await set(ref(db,'roster'),emptyRoster);
+      await set(ref(db,'meta/shiftKey'),key);
+      // TODO: CALENDAR ARCHIVE — before resetting, save snapshot of outgoing shift to
+      // Firebase path `archive/${stored}` for historical reference. Implement calendar
+      // view in a future release to browse past shift rosters by date/shift.
+      showToast('🔄 New shift — roster has been reset',4000,'warn');
+      refresh();
+    }else{
+      lastKnownShiftKey=key;
+    }
+  }catch(e){console.warn('[Shift] Reset check failed:',e.message);}
+}
+
 function setDate(){document.getElementById('dateLabel').textContent=new Date().toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'}).toUpperCase();}
 function initSel(){['maStn','epStn'].forEach(id=>{const s=document.getElementById(id);if(!s)return;while(s.options.length>1)s.remove(1);STNS.forEach(st=>{const o=document.createElement('option');o.value=st.id;o.textContent=st.name+' · '+st.loc;s.appendChild(o);});});}
 
 function refresh(){renderStats();renderFilters();renderRoster();renderStations();}
+
+// ─── CFS STATUS FUNCTIONS ──────────────────────────
+function toggleCFSPanel(stnId){
+  cfsOpen[stnId]=!cfsOpen[stnId];
+  const panel=document.getElementById('cfs-panel-'+stnId);
+  const btn=document.getElementById('cfs-btn-'+stnId);
+  if(panel)panel.classList.toggle('open',!!cfsOpen[stnId]);
+  if(btn)btn.classList.toggle('open',!!cfsOpen[stnId]);
+}
+
+function cfsDotClass(status){
+  if(!status)return'unknown';
+  const s=status.toUpperCase().replace(/ /g,'-');
+  if(s==='PRESENT')return'present';
+  if(s==='ABSENT'||s==='ON-LEAVE')return'absent';
+  if(s==='OPS'||s==='COURSE')return'ops';
+  return'unknown';
+}
+
+async function writeCFS(stnId,roleKey,status){
+  if(!window._firebase)return;
+  const{db,ref,set}=window._firebase;
+  // Permission: RDR can edit any; station user can only edit own station's roles (not readFrom)
+  const roles=CFS_ROLES[stnId]||[];
+  const role=roles.find(r=>r.key===roleKey);
+  if(!role||role.readFrom)return; // read-only mirror
+  if(!isRDR&&(!isStnUser||currentStationId!==stnId)){
+    showToast('⛔ You can only edit your own station CFS statuses',2800,'err-t');return;
+  }
+  if(!cfsStatuses[stnId])cfsStatuses[stnId]={};
+  cfsStatuses[stnId][roleKey]=status;
+  setSyncState('pending','Saving…');
+  try{
+    await set(ref(db,`cfs/${stnId}/${roleKey}`),status);
+    setSyncState('ok','Saved');
+    setTimeout(()=>setSyncState('ok','Live'),1200);
+  }catch(e){setSyncState('err','Error');showToast('CFS write failed: '+e.message,3000,'err-t');}
+}
 
 // ─── APPLIANCE DEFINITIONS (local, not Firebase) ──
 appliances=[
@@ -1649,7 +1862,8 @@ appliances.forEach(a=>{if(!assigns[a.id]){assigns[a.id]={};a.slots.forEach(s=>{a
 
 // ─── BOOT ──────────────────────────────────────────
 setDate();setShift();initSel();buildPinScreen();refresh();
-setInterval(setShift,60000);
+setInterval(()=>{setDate();setShift();},30000); // update date+shift badge every 30s
+setInterval(checkShiftReset,120000); // check for shift rollover every 2 minutes
 
 window.addEventListener('firebaseReady', async () => {
   const { auth, signInAnonymously, onAuthStateChanged } = window._firebase;
