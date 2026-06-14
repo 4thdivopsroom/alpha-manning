@@ -256,7 +256,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 
 /* ─── LAYOUT ──────────────────────────────────────── */
 .body{display:flex;flex:1;overflow:hidden;min-height:0}
-.sidebar{width:200px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.sidebar{width:240px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
 .sbsec{border-bottom:1px solid var(--bdr);flex-shrink:0}
 .sbhead{display:flex;align-items:center;justify-content:space-between;padding:8px 12px 7px}
 .sbtitle{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--tx3)}
@@ -407,7 +407,14 @@ body{min-height:100vh;display:flex;flex-direction:column}
 #dragGhost.active{opacity:1}
 
 /* autocomplete */
-.autocomplete{position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surf3);border:1px solid var(--bdr2);border-radius:7px;z-index:40;overflow:hidden;display:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.autocomplete{
+  position:fixed; /* fixed so it escapes any overflow:hidden parent */
+  background:var(--surf3);border:1px solid var(--bdr2);
+  border-radius:7px;z-index:200;overflow:hidden;
+  display:none;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);
+  min-width:200px;max-width:320px;
+}
 .autocomplete.show{display:block}
 .ac-item{padding:6px 10px;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx);transition:background .1s}
 .ac-item:hover,.ac-item.sel{background:var(--surf2)}
@@ -699,9 +706,12 @@ body{min-height:100vh;display:flex;flex-direction:column}
         <div class="ep-field"><label>Full name</label><input id="epName" placeholder="e.g. Tan Wei Ming" autocomplete="off"></div>
         <div class="ep-field"><label>Rank</label>
           <select id="epRank">
-            <option value="SGT">SGT — Sergeant</option><option value="SSG">SSG — Staff Sergeant</option>
-            <option value="WO">WO — Warrant Officer</option><option value="LTA">LTA — Lieutenant</option>
-            <option value="CPT">CPT — Captain</option><option value="MAJ">MAJ — Major</option><option value="CPL">CPL — Corporal</option>
+            <option value="MAJ">MAJ — Major</option>
+            <option value="CPT">CPT — Captain</option>
+            <option value="LTA">LTA — Lieutenant</option>
+            <option value="WO">WO — Warrant Officer</option>
+            <option value="SSG">SSG — Staff Sergeant</option>
+            <option value="SGT" selected>SGT — Sergeant</option>
           </select>
         </div>
         <div class="ep-field"><label>Home station</label><select id="epStn"><option value="">Unassigned</option></select></div>
@@ -733,6 +743,18 @@ body{min-height:100vh;display:flex;flex-direction:column}
       <button class="audit-x" onclick="closeAuditPanel()">×</button>
     </div>
     <div class="audit-list" id="auditList"><div class="audit-empty">Loading…</div></div>
+  </div>
+</div>
+
+<!-- LOGOUT MODAL -->
+<div class="mwrap" id="logoutModal">
+  <div class="modal" style="max-width:300px">
+    <div class="modal-hd"><h3>Sign out</h3><span class="modal-x" onclick="closeM('logoutModal')">×</span></div>
+    <p id="logoutModalLabel" style="font-size:13px;color:var(--tx2);margin-bottom:16px">Sign out?</p>
+    <div class="mbtns">
+      <button class="mbtn" onclick="closeM('logoutModal')">Cancel</button>
+      <button class="mbtn ac" onclick="confirmLogout()">Sign out</button>
+    </div>
   </div>
 </div>
 
@@ -787,13 +809,13 @@ const STNS=[
 ];
 const APPTYPES={
   A411:'Ambulance',A412:'Ambulance',A413:'Ambulance',A414:'Ambulance',A415:'Ambulance',
-  PA411:'Fast Response',PA412:'Fast Response',PA413:'Fast Response',
-  A421:'Ambulance',PA421:'Fast Response',
+  PA411:'Private Ambulance',PA412:'Private Ambulance',PA413:'Private Ambulance',
+  A421:'Ambulance',PA421:'Private Ambulance',
   A431:'Ambulance',A432:'Ambulance',A433:'Ambulance',A434:'Ambulance',A435:'Ambulance',
-  PA431:'Fast Response',PA432:'Fast Response',
+  PA431:'Private Ambulance',PA432:'Private Ambulance',
   A441:'Ambulance',A442:'Ambulance',A443:'Ambulance',A444:'Ambulance',A445:'Ambulance',A446:'Ambulance',
-  PA441:'Fast Response',PA442:'Fast Response',PA443:'Fast Response',PA444:'Fast Response',PA445:'Fast Response',
-  A451:'Ambulance',PA451:'Fast Response',
+  PA441:'Private Ambulance',PA442:'Private Ambulance',PA443:'Private Ambulance',PA444:'Private Ambulance',PA445:'Private Ambulance',
+  A451:'Ambulance',PA451:'Private Ambulance',
 };
 const AVCOLS=['#e8321d','#1d4ed8','#15803d','#d97706','#7c3aed','#0e7490','#db2777','#065f46','#b45309','#1e40af','#9d174d','#1e3a8a','#7e1d1d','#1d4e7e','#1d7e3e'];
 const SORT_MODES=[
@@ -880,7 +902,30 @@ function showPinScreen(){
   document.getElementById('pinErr').textContent='';
   document.querySelectorAll('.pin-stn-btn').forEach(b=>b.classList.remove('sel'));
   checkPinReady();
+  // Focus trap for keyboard input
+  document.getElementById('pinScreen').focus();
 }
+
+// Global keydown listener for PIN screen
+document.addEventListener('keydown', function(e){
+  if(document.getElementById('pinScreen').classList.contains('hidden'))return;
+  // ignore if focus is inside an input elsewhere
+  if(e.target&&e.target!==document.body&&e.target.tagName==='INPUT'&&!e.target.closest('#pinScreen'))return;
+  if(e.key>='0'&&e.key<='9'){
+    npPress(e.key);
+  } else if(e.key==='Backspace'){
+    npPress('⌫');
+  } else if(e.key==='Enter'){
+    submitPin();
+  } else if(/[a-zA-Z!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?`~\-]/.test(e.key)){
+    // Non-digit printable key — flash error
+    const err=document.getElementById('pinErr');
+    err.textContent='Digits only (0–9)';
+    err.style.animation='none';
+    requestAnimationFrame(()=>{err.style.animation='';});
+    setTimeout(()=>{if(err.textContent==='Digits only (0–9)')err.textContent='';},1500);
+  }
+});
 function hidePinScreen(){document.getElementById('pinScreen').classList.add('hidden');}
 
 // ─── PIN CONFIG ────────────────────────────────────
@@ -990,9 +1035,13 @@ function updateAuthUI(){
 
 function logoutPrompt(){
   if(!currentStationId)return showPinScreen();
-  if(confirm('Sign out of '+currentStationId+'?')){
-    currentStationId=null;isRDR=false;isStnUser=false;updateAuthUI();
-  }
+  const label=isRDR?'RDR':(STNS.find(s=>s.id===currentStationId)?.name||currentStationId);
+  document.getElementById('logoutModalLabel').textContent='Sign out of '+label+'?';
+  openM('logoutModal');
+}
+function confirmLogout(){
+  closeM('logoutModal');
+  currentStationId=null;isRDR=false;isStnUser=false;updateAuthUI();
 }
 
 // ─── FIREBASE DATA INIT ────────────────────────────
@@ -1160,15 +1209,21 @@ function renderFilters(){
 
 function renderRoster(){
   const aset=assignedSet();
-  const canDrag=isRDR; // only RDR can drag people around
-  const avail=sortedPersons().filter(p=>!aset.has(p.id));
+  const canDrag=isRDR||isStnUser; // both RDR and station users can drag
+  const avail=sortedPersons().filter(p=>{
+    // when a station filter is active, show only that station's crew in sidebar
+    if(filt!=='all'&&p.stn&&p.stn!==filt)return false;
+    return !aset.has(p.id);
+  });
   const html=avail.length
     ?avail.map(p=>`<div class="pchip${canDrag?'':' readonly'}"${canDrag?` draggable="true" data-pid="${p.id}" id="pc_${p.id}" style="touch-action:none"`:''}>
         <div class="av" style="background:${avCol(p.id)};width:22px;height:22px">${inits(p.name)}</div>
         <span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span>
         <span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px">${p.name}</span>
+        ${p.stn?`<span style="font-size:9px;color:var(--tx3);flex-shrink:0;font-family:var(--font-mono)">${p.stn}</span>`:''}
+        ${canDrag?`<svg style="flex-shrink:0;opacity:.35" width="10" height="10" viewBox="0 0 10 10" fill="currentColor"><circle cx="2" cy="2" r="1"/><circle cx="5" cy="2" r="1"/><circle cx="8" cy="2" r="1"/><circle cx="2" cy="5" r="1"/><circle cx="5" cy="5" r="1"/><circle cx="8" cy="5" r="1"/><circle cx="2" cy="8" r="1"/><circle cx="5" cy="8" r="1"/><circle cx="8" cy="8" r="1"/></svg>`:''}
       </div>`).join('')
-    :`<div class="empty-r">All crew assigned ✓</div>`;
+    :`<div class="empty-r">${filt!=='all'?'No unassigned crew for this station':'All crew assigned ✓'}</div>`;
   ['rosterList','drawerRosterList'].forEach(id=>{
     const el=document.getElementById(id);if(!el)return;
     el.innerHTML=html;
@@ -1242,7 +1297,13 @@ function onInput(inp){
   const matches=persons.filter(p=>!aset.has(p.id)&&p.name.toLowerCase().includes(val)).slice(0,6);
   if(!matches.length){ac.classList.remove('show');ac.innerHTML='';return;}
   ac.innerHTML=matches.map(p=>`<div class="ac-item" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
-  ac.classList.add('show');activeAC={appId,sl,matches,idx:-1};
+  // Position fixed relative to the input element
+  const rect=inp.getBoundingClientRect();
+  ac.style.top=(rect.bottom+4)+'px';
+  ac.style.left=rect.left+'px';
+  ac.style.width=Math.max(rect.width,200)+'px';
+  ac.classList.add('show');
+  activeAC={appId,sl,matches,idx:-1};
 }
 function onKey(e,inp){
   if(!activeAC)return;const ac=document.getElementById('ac_'+activeAC.appId+'_'+activeAC.sl.replace(/ /g,'_'));if(!ac)return;
@@ -1322,7 +1383,7 @@ function renderEpList(){
       <div style="flex:1;min-width:0">
         <div class="ep-inline-edit">
           <input class="ep-ie-input" id="ie_name_${p.id}" value="${p.name}" placeholder="Name" style="flex:2">
-          <select class="ep-ie-input" id="ie_rank_${p.id}" style="flex:0 0 90px">${['SGT','SSG','WO','LTA','CPT','MAJ','CPL'].map(r=>`<option${p.rank===r?' selected':''}>${r}</option>`).join('')}</select>
+          <select class="ep-ie-input" id="ie_rank_${p.id}" style="flex:0 0 90px">${['MAJ','CPT','LTA','WO','SSG','SGT'].map(r=>`<option${p.rank===r?' selected':''}>${r}</option>`).join('')}</select>
           <select class="ep-ie-input" id="ie_stn_${p.id}" style="flex:0 0 110px"><option value="">Unassigned</option>${STNS.map(s=>`<option value="${s.id}"${p.stn===s.id?' selected':''}>${s.name}</option>`).join('')}</select>
         </div>
         <div style="display:flex;gap:5px;margin-top:6px">
