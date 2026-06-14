@@ -771,7 +771,7 @@ import { getDatabase, ref, onValue, set, get, push, serverTimestamp } from "http
    (Project Settings → Your apps → SDK setup)
 ══════════════════════════════════════════════════ */
 const firebaseConfig = {
-  apiKey:            "AIzaSyD5aoWkKg969yOkNtZ-T0cEYcWynG2D4SY",
+  apiKey:            ${{ secrets.GOOGLE_API_KEY }},
   authDomain:        "scdf-ems-roster.firebaseapp.com",
   databaseURL:       "https://scdf-ems-roster-default-rtdb.asia-southeast1.firebasedatabase.app",
   projectId:         "scdf-ems-roster",
