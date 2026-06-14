@@ -325,7 +325,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .sb-r{background:rgba(239,68,68,0.12);color:var(--s-red);border:1px solid rgba(239,68,68,0.25)}
 .stn-bar{height:3px;margin:8px 14px 0;background:var(--bdr2);border-radius:2px;overflow:hidden}
 .stn-bar-fill{height:100%;border-radius:2px;transition:width .7s cubic-bezier(.4,0,.2,1)}
-.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(175px,1fr));gap:8px;padding:10px}
+.agrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:8px;padding:10px}
 .amb{border:1px solid var(--bdr);border-radius:8px;background:var(--surf2);overflow:hidden;transition:border-color .15s}
 .amb-hd{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-bottom:1px solid var(--bdr);background:var(--surf3)}
 .amb-id{font-family:var(--font-mono);font-size:12px;font-weight:700;letter-spacing:.04em;color:var(--tx)}
@@ -333,7 +333,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:box-shadow .3s}
 .sdot.alive{background:var(--s-green);box-shadow:0 0 0 3px rgba(34,197,94,0.2)}
 .sdot.empty{background:var(--s-red);box-shadow:0 0 0 3px rgba(239,68,68,0.2)}
-.slots-grid{padding:7px 8px 8px;display:flex;flex-direction:column;gap:5px}
+.slots-grid{padding:8px 10px 10px;display:flex;flex-direction:column;gap:7px}
 .arow{display:flex;flex-direction:column}
 .ar-item{display:flex;align-items:stretch;border-bottom:1px solid var(--bdr)}
 .ar-item:last-child{border-bottom:none}
@@ -342,7 +342,7 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .slw{flex:1;min-width:150px}
 
 /* ─── SLOT ────────────────────────────────────────── */
-.slot{position:relative;min-height:30px;border:1.5px dashed var(--bdr2);border-radius:7px;padding:3px 8px;display:flex;align-items:center;gap:6px;transition:all .15s}
+.slot{position:relative;border:1.5px dashed var(--bdr2);border-radius:7px;padding:6px 10px 7px;display:flex;flex-direction:column;gap:3px;transition:all .15s}
 .slot.filled{border-style:solid;border-color:var(--bdr);background:var(--surf3)}
 .slot.dh{border-style:solid;border-color:var(--acc);background:rgba(232,50,29,0.12);box-shadow:0 0 0 3px rgba(232,50,29,0.15),inset 0 0 0 1px rgba(232,50,29,0.2);transform:scale(1.01)}
 .dragging-active .slot:not(.filled){animation:slotPulse 1.6s ease-in-out infinite}
@@ -350,12 +350,12 @@ body{min-height:100vh;display:flex;flex-direction:column}
 @keyframes slotPulse{0%,100%{border-color:var(--bdr2);background:transparent}50%{border-color:rgba(232,50,29,0.4);background:rgba(232,50,29,0.05)}}
 /* station-user view: slots are not droppable, just display */
 .slot.locked{cursor:default}
-.slot-role{font-size:9px;font-weight:600;color:var(--tx3);min-width:56px;flex-shrink:0;text-transform:uppercase;letter-spacing:.05em}
-.slot-input-wrap{flex:1;position:relative;min-width:0}
-.slot-input{width:100%;font-size:11px;border:none;background:transparent;color:var(--tx);font-family:var(--font-ui);padding:0;outline:none;cursor:text}
-.slot-input::placeholder{color:var(--tx3);font-size:10px}
-.person-inline{display:flex;align-items:center;gap:5px}
-.pname{font-size:11px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.slot-role{font-size:8.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;line-height:1}
+.slot-input-wrap{position:relative;min-width:0;width:100%}
+.slot-input{width:100%;font-size:12px;border:none;background:transparent;color:var(--tx);font-family:var(--font-ui);padding:0;outline:none;cursor:text;line-height:1.3}
+.slot-input::placeholder{color:var(--tx3);font-size:11px}
+.person-inline{display:flex;align-items:center;gap:5px;min-width:0}
+.pname{font-size:12px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm{cursor:pointer;color:var(--tx3);font-size:14px;padding:1px 4px;border-radius:3px;line-height:1;flex-shrink:0;transition:color .1s}
 .rm:hover{color:var(--s-red)}
 /* ─── TOAST ───────────────────────────────────────── */
@@ -401,6 +401,92 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .sync-dot.err{background:var(--s-red)}
 @keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
 .sync-label{font-size:10px;color:var(--tx3);font-weight:500}
+
+/* ─── SIDEBAR EDITABLE BADGE ──────────────────────── */
+.fchip-edit-tag{
+  font-size:7.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--s-green);background:rgba(34,197,94,0.12);
+  border:1px solid rgba(34,197,94,0.3);border-radius:3px;
+  padding:1px 4px;margin-top:1px;line-height:1.4;
+}
+.fchip.editing-stn{border-color:var(--s-green)!important;background:rgba(34,197,94,0.08)!important}
+.fchip.editing-stn .fn,.fchip.editing-stn .fl{color:var(--s-green)!important}
+
+/* ─── CROSS-STATION ALERT TOAST VARIANT ──────────── */
+#toast.warn{background:rgba(245,158,11,0.18);border-color:var(--s-amber);color:var(--s-amber)}
+#toast.err-t{background:rgba(239,68,68,0.18);border-color:var(--s-red);color:var(--s-red)}
+
+/* ─── SHIFT WINDOW BANNER ─────────────────────────── */
+.shift-prep-banner{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 16px;
+  background:linear-gradient(90deg,rgba(245,158,11,0.1),rgba(245,158,11,0.05));
+  border-bottom:1px solid rgba(245,158,11,0.2);
+  flex-shrink:0;font-size:11px;
+}
+.shift-prep-banner.hidden{display:none}
+.shift-prep-text{display:flex;align-items:center;gap:7px;color:var(--tx2)}
+.shift-prep-icon{font-size:14px}
+.shift-key-pill{
+  font-size:9.5px;font-weight:700;font-family:var(--font-mono);
+  padding:2px 8px;border-radius:10px;flex-shrink:0;
+}
+.shift-key-pill.am{background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3)}
+.shift-key-pill.pm{background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3)}
+.shift-key-pill.prep{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
+
+/* ─── CFS PANEL ───────────────────────────────────── */
+.cfs-toggle-btn{
+  height:24px;padding:0 10px;
+  border:1px solid var(--bdr2);border-radius:5px;
+  background:var(--surf3);color:var(--tx3);
+  font-size:9.5px;font-weight:700;font-family:var(--font-ui);
+  cursor:pointer;transition:all .15s;
+  display:flex;align-items:center;gap:4px;
+  letter-spacing:.05em;text-transform:uppercase;
+  flex-shrink:0;
+}
+.cfs-toggle-btn:hover{border-color:var(--s-amber);color:var(--s-amber)}
+.cfs-toggle-btn.open{border-color:var(--s-amber);color:var(--s-amber);background:rgba(245,158,11,0.08)}
+.cfs-toggle-btn .cfs-arrow{transition:transform .2s;display:inline-block}
+.cfs-toggle-btn.open .cfs-arrow{transform:rotate(180deg)}
+.cfs-panel{
+  border-top:1px solid var(--bdr);
+  padding:10px 14px 12px;
+  background:var(--surf);
+  display:none;
+}
+.cfs-panel.open{display:block;animation:mIn .15s ease}
+.cfs-panel-title{
+  font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;
+  color:var(--tx3);margin-bottom:8px;
+}
+.cfs-roles{display:flex;flex-wrap:wrap;gap:7px}
+.cfs-role-card{
+  border:1px solid var(--bdr);border-radius:7px;
+  background:var(--surf2);
+  padding:7px 10px;
+  min-width:180px;flex:1;
+  display:flex;align-items:center;gap:8px;
+}
+.cfs-role-label{flex:1;min-width:0}
+.cfs-role-name{font-size:10px;font-weight:700;color:var(--tx);letter-spacing:.03em}
+.cfs-role-note{font-size:8.5px;color:var(--tx3);margin-top:1px}
+.cfs-status-sel{
+  height:26px;padding:0 6px;
+  border:1px solid var(--bdr2);border-radius:6px;
+  background:var(--surf3);color:var(--tx);
+  font-size:10px;font-weight:600;font-family:var(--font-mono);
+  cursor:pointer;transition:border-color .15s;
+  flex-shrink:0;min-width:100px;
+}
+.cfs-status-sel:focus{outline:none;border-color:var(--acc)}
+.cfs-status-sel:disabled{opacity:.5;cursor:default}
+.cfs-sdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .2s}
+.cfs-sdot.present{background:var(--s-green);box-shadow:0 0 0 2px rgba(34,197,94,0.2)}
+.cfs-sdot.absent,.cfs-sdot.on-leave{background:var(--s-amber);box-shadow:0 0 0 2px rgba(245,158,11,0.2)}
+.cfs-sdot.ops,.cfs-sdot.course{background:var(--s-blue);box-shadow:0 0 0 2px rgba(59,130,246,0.2)}
+.cfs-sdot.unknown{background:var(--tx3)}
 
 /* drag ghost */
 #dragGhost{position:fixed;pointer-events:none;z-index:9999;background:var(--surf3);border:1.5px solid var(--acc);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:11px;color:var(--tx);box-shadow:0 8px 30px rgba(0,0,0,.5),0 0 0 4px rgba(232,50,29,0.15);transform:translate(-50%,-50%) rotate(2deg);min-width:120px;opacity:0;pointer-events:none;font-family:var(--font-ui)}
@@ -629,6 +715,15 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </button>
 </div>
 
+<!-- SHIFT PREP BANNER — visible during 1-hr advance window -->
+<div class="shift-prep-banner hidden" id="shiftPrepBanner">
+  <div class="shift-prep-text">
+    <span class="shift-prep-icon">⏰</span>
+    <span id="shiftPrepMsg">Preparing for next shift — roster has been reset.</span>
+  </div>
+  <span class="shift-key-pill prep" id="shiftKeyPill"></span>
+</div>
+
 <div class="body">
   <div class="sidebar">
     <div class="sbsec">
@@ -826,8 +921,34 @@ const SORT_MODES=[
 ];
 const RANK_W={COL:7,MAJ:6,CPT:5,LTA:4,WO:3,SWO:3,WO1:3,WO2:3,SSG:2,SGT:1,SGT1:1,SGT2:1,SGT3:1,CPL:0,LCP:0};
 
+// ─── CFS ROLE CONFIG ──────────────────────────────
+// Each entry: { key, label, note (optional) }
+const CFS_ROLES={
+  '41':[
+    {key:'oic',   label:'S41 EMS OIC'},
+    {key:'sets',  label:'S41 SETS'},
+  ],
+  '42':[
+    {key:'oic',   label:'S42/45 EMS OIC', note:'Shared with Stn 45 — status set here'},
+  ],
+  '43':[
+    {key:'oic',   label:'S43 EMS OIC'},
+  ],
+  '44':[
+    {key:'oic',   label:'S44 EMS OIC'},
+    {key:'sets',  label:'S44 SETS'},
+  ],
+  '45':[
+    // S45 reads OIC from S42 — display only, no edit here
+    {key:'oic',   label:'S42/45 EMS OIC', note:'Status controlled by Stn 42', readFrom:'42'},
+  ],
+};
+const CFS_STATUSES=['PRESENT','ABSENT','ON LEAVE','OPS','COURSE'];
+
 // ─── STATE ────────────────────────────────────────
 let persons=[], appliances=[], assigns={};
+let cfsStatuses={};     // {stnId: {roleKey: statusString}}
+let cfsOpen={};         // {stnId: boolean} — panel toggle state
 let drag=null,touchPid=null;
 let filt='all',dark=true,viewMode='grid',sortIdx=0,activeAC=null,epEditId=null;
 
@@ -836,6 +957,9 @@ let currentUser=null;          // Firebase auth user
 let currentStationId=null;     // "41"–"45" or "RDR" or null
 let isRDR=false;               // full access
 let isStnUser=false;           // station-scoped write
+
+// Shift tracking
+let lastKnownShiftKey=null;
 
 let pidCounter=100;
 function mkPerson(name,rank,stn){return{id:'p'+(pidCounter++),name,rank,stn:stn||''};}
@@ -1296,26 +1420,35 @@ function onInput(inp){
   const aset=assignedSet();
   const matches=persons.filter(p=>!aset.has(p.id)&&p.name.toLowerCase().includes(val)).slice(0,6);
   if(!matches.length){ac.classList.remove('show');ac.innerHTML='';return;}
-  ac.innerHTML=matches.map(p=>`<div class="ac-item" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
+  ac.innerHTML=matches.map((p,i)=>`<div class="ac-item${i===0?' sel':''}" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
   // Position fixed relative to the input element
   const rect=inp.getBoundingClientRect();
   ac.style.top=(rect.bottom+4)+'px';
   ac.style.left=rect.left+'px';
   ac.style.width=Math.max(rect.width,200)+'px';
   ac.classList.add('show');
-  activeAC={appId,sl,matches,idx:-1};
+  activeAC={appId,sl,matches,idx:0}; // pre-select first item
 }
 function onKey(e,inp){
   if(!activeAC)return;const ac=document.getElementById('ac_'+activeAC.appId+'_'+activeAC.sl.replace(/ /g,'_'));if(!ac)return;
   const items=ac.querySelectorAll('.ac-item');
-  if(e.key==='ArrowDown'){e.preventDefault();activeAC.idx=Math.min(activeAC.idx+1,items.length-1);items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));}
-  else if(e.key==='ArrowUp'){e.preventDefault();activeAC.idx=Math.max(activeAC.idx-1,0);items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));}
-  else if(e.key==='Enter'){
+  if(e.key==='ArrowDown'){
     e.preventDefault();
-    if(activeAC.idx>=0&&activeAC.matches[activeAC.idx])pickPerson(activeAC.appId,activeAC.sl,activeAC.matches[activeAC.idx].id);
-    else if(activeAC.matches.length===1)pickPerson(activeAC.appId,activeAC.sl,activeAC.matches[0].id);
+    activeAC.idx=Math.min(activeAC.idx+1,items.length-1);
+    items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    activeAC.idx=Math.max(activeAC.idx-1,0);
+    items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    // always pick the highlighted item (idx defaults to 0 = first result)
+    const target=activeAC.matches[activeAC.idx]??activeAC.matches[0];
+    if(target)pickPerson(activeAC.appId,activeAC.sl,target.id);
     else{const val=inp.value.trim();if(val){const np=mkPerson(val,randRank(),'');persons.push(np);doAssign(activeAC.appId,activeAC.sl,np.id);activeAC=null;}}
-  }else if(e.key==='Escape'){ac.classList.remove('show');activeAC=null;}
+  } else if(e.key==='Escape'){
+    ac.classList.remove('show');activeAC=null;
+  }
 }
 function hideAC(inp,d){setTimeout(()=>{const ac=document.getElementById('ac_'+inp.dataset.app+'_'+inp.dataset.slot.replace(/ /g,'_'));if(ac)ac.classList.remove('show');},d);}
 function pickPerson(aId,sl,pid){if(assigns[aId][sl])return;if(Object.values(assigns[aId]).includes(pid))return;doAssign(aId,sl,pid);activeAC=null;}
