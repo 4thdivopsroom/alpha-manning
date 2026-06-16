@@ -47,6 +47,14 @@
         "personnel": {
           ".read":  "auth != null",
           ".write": "auth != null"
+        },
+        "cfs": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
+        },
+        "meta": {
+          ".read":  "auth != null",
+          ".write": "auth != null"
         }
       }
     }
@@ -1173,7 +1181,7 @@ function confirmLogout(){
 
 // ─── FIREBASE DATA INIT ────────────────────────────
 function initFirebaseListeners(){
-  const {db,ref,onValue}=window._firebase;
+  const {db,ref,onValue,get}=window._firebase;
 
   // Personnel
   onValue(ref(db,'personnel'),snap=>{
@@ -1264,7 +1272,7 @@ async function writeAssign(appId,slot,pid){
     });
     setSyncState('ok','Saved');
   }catch(e){
-    setSyncState('err','Error');alert('Write failed: '+e.message);
+    setSyncState('err','Error');showToast('Write failed: '+e.message,3000,'err-t');
   }finally{pendingWrites--;if(pendingWrites===0)setTimeout(()=>setSyncState('ok','Live'),1200);}
 }
 
@@ -1276,7 +1284,7 @@ async function writePersonnel(updatedPersons){
   try{
     await set(ref(db,'personnel'),obj);
     setSyncState('ok','Saved');
-  }catch(e){setSyncState('err','Error');alert('Write failed: '+e.message);}
+  }catch(e){setSyncState('err','Error');showToast('Write failed: '+e.message,3000,'err-t');}
   finally{pendingWrites--;if(pendingWrites===0)setTimeout(()=>setSyncState('ok','Live'),1200);}
 }
 
@@ -1484,28 +1492,6 @@ function renderCFSPanel(stn){
   const roles=CFS_ROLES[stn.id];
   if(!roles||!roles.length)return'';
   const isOpen=!!cfsOpen[stn.id];
-  const canEditCFS=isRDR||(isStnUser&&currentStationId===stn.id);
-  const rolesHtml=roles.map(role=>{
-    // readFrom: pull status from another station
-    const srcStn=role.readFrom||stn.id;
-    const status=(cfsStatuses[srcStn]&&cfsStatuses[srcStn][role.key])||'';
-    const dotCls=cfsDotClass(status);
-    const readOnly=!!role.readFrom||!canEditCFS;
-    const selectHtml=readOnly
-      ?`<span style="font-size:10px;font-weight:700;font-family:var(--font-mono);color:var(--tx2);min-width:100px;text-align:right">${status||'—'}</span>`
-      :`<select class="cfs-status-sel" onchange="writeCFS('${srcStn}','${role.key}',this.value)">
-          <option value="">— Status —</option>
-          ${CFS_STATUSES.map(s=>`<option value="${s}"${status===s?' selected':''}>${s}</option>`).join('')}
-        </select>`;
-    return`<div class="cfs-role-card">
-      <div class="cfs-sdot ${dotCls}"></div>
-      <div class="cfs-role-label">
-        <div class="cfs-role-name">${role.label}</div>
-        ${role.note?`<div class="cfs-role-note">${role.note}</div>`:''}
-      </div>
-      ${selectHtml}
-    </div>`;
-  }).join('');
   return`<button class="cfs-toggle-btn${isOpen?' open':''}" id="cfs-btn-${stn.id}" onclick="toggleCFSPanel('${stn.id}')">
     🪖 CFS <span class="cfs-arrow">▾</span>
   </button>`;
@@ -1715,7 +1701,7 @@ function saveApp(){
   if(!isRDR)return;
   const id=document.getElementById('maId').value.trim().toUpperCase();
   const type=document.getElementById('maType').value.trim();const stn=document.getElementById('maStn').value;
-  if(!id||!stn)return;if(appliances.find(a=>a.id===id)){alert('ID exists');return;}
+  if(!id||!stn)return;if(appliances.find(a=>a.id===id)){showToast('⛔ Appliance ID already exists',2500,'err-t');return;}
   APPTYPES[id]=type||'Ambulance';appliances.push({id,stn,slots:['Paramedic','Driver']});assigns[id]={Paramedic:null,Driver:null};
   document.getElementById('maId').value='';document.getElementById('maType').value='';closeM('aModal');refresh();
 }
