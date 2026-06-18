@@ -84,7 +84,6 @@
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
-/* ─── TOKENS ──────────────────────────────────────── */
 :root {
   --bg:#0b0d12; --surf:#141820; --surf2:#1a1f2e; --surf3:#1f2535;
   --bdr:#252b3b; --bdr2:#2e3549;
@@ -115,7 +114,6 @@
 html{font-family:var(--font-ui);background:var(--bg);background-image:var(--tex);color:var(--tx);font-size:13px;-webkit-text-size-adjust:100%}
 body{min-height:100vh;display:flex;flex-direction:column}
 
-/* ─── LOADING / AUTH SCREENS ─────────────────────── */
 .screen-overlay{
   position:fixed;inset:0;z-index:200;
   background:var(--bg);background-image:var(--tex);
@@ -132,7 +130,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .screen-title{font-size:18px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;margin-bottom:6px}
 .screen-sub{font-size:12px;color:var(--tx3);margin-bottom:28px;text-align:center;max-width:300px;line-height:1.6}
 
-/* PIN entry card */
 .pin-card{
   background:var(--surf);
   border:1px solid var(--bdr2);
@@ -155,7 +152,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .pin-stn-btn .psn{font-size:14px;font-weight:700;color:var(--tx);line-height:1}
 .pin-stn-btn .psl{font-size:8.5px;color:var(--tx3);text-align:center}
 .pin-stn-btn.sel .psn,.pin-stn-btn.sel .psl{color:var(--acc)}
-/* PIN dot display */
 .pin-dots{
   display:flex;align-items:center;justify-content:center;gap:10px;
   margin:16px 0 14px;
@@ -167,7 +163,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   transition:all .15s;
 }
 .pin-dot.filled{background:var(--acc);border-color:var(--acc);transform:scale(1.1)}
-/* number pad */
 .numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .npbtn{
   height:52px;border:1.5px solid var(--bdr);border-radius:10px;
@@ -197,11 +192,9 @@ body{min-height:100vh;display:flex;flex-direction:column}
 }
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
 
-/* Loading spinner */
 .spin{width:28px;height:28px;border:3px solid var(--bdr);border-top-color:var(--acc);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* ─── AUTH STATUS BADGE in header ─────────────────── */
 .auth-badge{
   display:flex;align-items:center;gap:5px;
   font-size:11px;font-weight:600;
@@ -214,7 +207,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .auth-badge.none{background:var(--surf2);color:var(--tx3);border:1px solid var(--bdr2)}
 .auth-badge::before{content:'';width:6px;height:6px;border-radius:50%;background:currentColor}
 
-/* ─── AUDIT LOG PANEL ─────────────────────────────── */
 .audit-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:120;align-items:center;justify-content:center;backdrop-filter:blur(5px);padding:20px}
 .audit-wrap.open{display:flex;animation:mIn .18s ease}
 @keyframes mIn{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}}
@@ -232,7 +224,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .audit-ts{font-size:9px;color:var(--tx3);white-space:nowrap;font-family:var(--font-mono);margin-top:2px}
 .audit-empty{padding:40px;text-align:center;color:var(--tx3);font-size:12px}
 
-/* ─── HEADER ──────────────────────────────────────── */
 .header{display:flex;align-items:center;gap:10px;padding:0 16px;height:52px;background:var(--surf);border-bottom:1px solid var(--bdr);position:sticky;top:0;z-index:60;flex-shrink:0}
 .hlogo{width:30px;height:30px;background:var(--acc);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px;flex-shrink:0}
 .hbrand .name{font-size:13px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;line-height:1}
@@ -251,7 +242,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .theme-btn{width:34px;height:30px;background:var(--surf2);border:1px solid var(--bdr2);border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--tx3);font-size:15px;transition:color .15s}
 .hbtn-label{display:inline}
 
-/* ─── STATS BAR ───────────────────────────────────── */
 .stats-bar{display:flex;background:var(--surf);border-bottom:1px solid var(--bdr);padding:0 16px;overflow-x:auto;flex-shrink:0;scrollbar-width:none}
 .stats-bar::-webkit-scrollbar{display:none}
 .stat-item{display:flex;align-items:center;gap:10px;padding:10px 18px 10px 0;margin-right:18px;border-right:1px solid var(--bdr);min-width:110px;flex-shrink:0}
@@ -262,7 +252,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .rbar-out{flex:1;height:3px;background:var(--bdr2);border-radius:2px;overflow:hidden;margin-top:4px}
 .rbar-in{height:100%;border-radius:2px;transition:width .6s cubic-bezier(.4,0,.2,1)}
 
-/* ─── LAYOUT ──────────────────────────────────────── */
 .body{display:flex;flex:1;overflow:hidden;min-height:0}
 .sidebar{width:240px;flex-shrink:0;background:var(--surf);border-right:1px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
 .sbsec{border-bottom:1px solid var(--bdr);flex-shrink:0}
@@ -281,7 +270,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .rscroll::-webkit-scrollbar{width:4px}
 .rscroll::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:2px}
 
-/* person chip */
 .pchip{display:flex;align-items:center;gap:7px;padding:7px 9px;border:1px solid var(--bdr);border-radius:8px;background:var(--surf2);cursor:grab;user-select:none;font-size:11px;color:var(--tx);transition:all .15s;margin-bottom:4px;touch-action:none;position:relative}
 .pchip::before{content:'⠿';color:var(--tx3);font-size:10px;flex-shrink:0;transition:color .15s;line-height:1}
 .pchip:hover{border-color:var(--acc);box-shadow:0 3px 12px rgba(232,50,29,0.2);transform:translateY(-1px)}
@@ -289,7 +277,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .pchip.dragging{opacity:.15;cursor:grabbing;transform:scale(.95);box-shadow:none}
 .pchip:last-child{margin-bottom:0}
 
-/* read-only chip (station users can't drag) */
 .pchip.readonly{cursor:default}
 .pchip.readonly::before{display:none}
 .pchip.readonly:hover{transform:none;box-shadow:none;border-color:var(--bdr)}
@@ -299,7 +286,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .rk-o{background:var(--rbg-o);color:var(--rfc-o)}.rk-w{background:var(--rbg-w);color:var(--rfc-w)}
 .rk-s{background:var(--rbg-s);color:var(--rfc-s)}.rk-c{background:var(--rbg-c);color:var(--rfc-c)}
 
-/* sort strip */
 .sort-strip{display:flex;align-items:center;gap:5px;padding:5px 8px;border-top:1px solid var(--bdr);flex-shrink:0}
 .sort-cyc{flex:1;height:24px;border:1px solid var(--bdr);border-radius:5px;background:var(--surf2);color:var(--tx2);cursor:pointer;font-size:10px;font-family:var(--font-ui);font-weight:600;display:flex;align-items:center;justify-content:center;gap:4px;transition:all .12s;white-space:nowrap;overflow:hidden}
 .sort-cyc:hover{color:var(--tx);border-color:var(--bdr2)}
@@ -309,7 +295,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .sort-clr[hidden]{display:none!important}
 .empty-r{padding:14px 8px;text-align:center;font-size:11px;color:var(--tx3)}
 
-/* ─── MAIN ────────────────────────────────────────── */
 .main{flex:1;overflow-y:auto;padding:14px 16px;scrollbar-width:thin;scrollbar-color:var(--bdr2) transparent;min-width:0}
 .main::-webkit-scrollbar{width:6px}
 .main::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
@@ -318,7 +303,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .vtbtn:hover{color:var(--tx);border-color:var(--bdr2)}
 .vtbtn.on{background:var(--surf3);border-color:var(--bdr2);color:var(--tx)}
 
-/* ─── STATION BLOCKS ──────────────────────────────── */
 .stn-area{display:flex;flex-direction:column;gap:12px}
 .stn-block{background:var(--surf);border:1px solid var(--bdr);border-radius:10px;overflow:hidden}
 .dragging-active .stn-block{border-color:var(--bdr2)}
@@ -349,14 +333,12 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .ar-slots{display:flex;flex:1;align-items:center;flex-wrap:wrap;gap:6px;padding:7px 12px}
 .slw{flex:1;min-width:150px}
 
-/* ─── SLOT ────────────────────────────────────────── */
 .slot{position:relative;border:1.5px dashed var(--bdr2);border-radius:7px;padding:6px 10px 7px;display:flex;flex-direction:column;gap:3px;transition:all .15s}
 .slot.filled{border-style:solid;border-color:var(--bdr);background:var(--surf3)}
 .slot.dh{border-style:solid;border-color:var(--acc);background:rgba(232,50,29,0.12);box-shadow:0 0 0 3px rgba(232,50,29,0.15),inset 0 0 0 1px rgba(232,50,29,0.2);transform:scale(1.01)}
 .dragging-active .slot:not(.filled){animation:slotPulse 1.6s ease-in-out infinite}
 .dragging-active .slot.dh{animation:none}
 @keyframes slotPulse{0%,100%{border-color:var(--bdr2);background:transparent}50%{border-color:rgba(232,50,29,0.4);background:rgba(232,50,29,0.05)}}
-/* station-user view: slots are not droppable, just display */
 .slot.locked{cursor:default}
 .slot-role{font-size:8.5px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.07em;line-height:1}
 .slot-input-wrap{position:relative;min-width:0;width:100%}
@@ -366,7 +348,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .pname{font-size:12px;color:var(--tx);flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .rm{cursor:pointer;color:var(--tx3);font-size:14px;padding:1px 4px;border-radius:3px;line-height:1;flex-shrink:0;transition:color .1s}
 .rm:hover{color:var(--s-red)}
-/* ─── TOAST ───────────────────────────────────────── */
 #toast{
   position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);
   background:var(--surf3);border:1px solid var(--bdr2);
@@ -379,7 +360,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 }
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ─── SIGN-IN BANNER ──────────────────────────────── */
 .signin-banner{
   display:flex;align-items:center;justify-content:space-between;gap:12px;
   padding:10px 16px;
@@ -410,7 +390,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 @keyframes syncPulse{0%,100%{opacity:1}50%{opacity:.4}}
 .sync-label{font-size:10px;color:var(--tx3);font-weight:500}
 
-/* ─── SIDEBAR EDITABLE BADGE ──────────────────────── */
 .fchip-edit-tag{
   font-size:7.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
   color:var(--s-green);background:rgba(34,197,94,0.12);
@@ -420,11 +399,9 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .fchip.editing-stn{border-color:var(--s-green)!important;background:rgba(34,197,94,0.08)!important}
 .fchip.editing-stn .fn,.fchip.editing-stn .fl{color:var(--s-green)!important}
 
-/* ─── CROSS-STATION ALERT TOAST VARIANT ──────────── */
 #toast.warn{background:rgba(245,158,11,0.18);border-color:var(--s-amber);color:var(--s-amber)}
 #toast.err-t{background:rgba(239,68,68,0.18);border-color:var(--s-red);color:var(--s-red)}
 
-/* ─── SHIFT WINDOW BANNER ─────────────────────────── */
 .shift-prep-banner{
   display:flex;align-items:center;justify-content:space-between;gap:10px;
   padding:7px 16px;
@@ -443,7 +420,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .shift-key-pill.pm{background:rgba(168,85,247,0.15);color:#a855f7;border:1px solid rgba(168,85,247,0.3)}
 .shift-key-pill.prep{background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3)}
 
-/* ─── CFS PANEL ───────────────────────────────────── */
 .cfs-toggle-btn{
   height:24px;padding:0 10px;
   border:1px solid var(--bdr2);border-radius:5px;
@@ -582,7 +558,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 .ep-ie-cancel{height:28px;padding:0 8px;border:1px solid var(--bdr2);border-radius:6px;background:transparent;color:var(--tx3);font-size:11px;font-family:var(--font-ui);cursor:pointer}
 .ep-empty{padding:40px;text-align:center;color:var(--tx3);font-size:12px}
 
-/* mobile */
 .mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:70}
 .mob-overlay.open{display:block}
 .mob-bar{display:none;position:fixed;bottom:0;left:0;right:0;background:var(--surf);border-top:1px solid var(--bdr);padding:8px 12px max(8px,env(safe-area-inset-bottom));z-index:65;gap:6px;align-items:center}
@@ -634,7 +609,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 </head>
 <body id="app">
 
-<!-- ═══════ LOADING SCREEN ═══════ -->
 <div class="screen-overlay" id="loadingScreen">
   <div class="screen-logo">🚑</div>
   <div class="screen-title">SCDF EMS Roster</div>
@@ -642,7 +616,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   <div class="spin" style="margin-top:8px"></div>
 </div>
 
-<!-- ═══════ PIN AUTH SCREEN ═══════ -->
 <div class="screen-overlay hidden" id="pinScreen">
   <div class="screen-logo">🔐</div>
   <div class="screen-title">SCDF EMS Roster</div>
@@ -670,7 +643,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 
 <div id="dragGhost"></div>
 
-<!-- HEADER -->
 <header class="header">
   <div class="hlogo">🚑</div>
   <div class="hbrand"><div class="name">SCDF EMS</div><div class="sub">Operations Roster</div></div>
@@ -678,15 +650,12 @@ body{min-height:100vh;display:flex;flex-direction:column}
   <span class="shift-tag" id="shiftBadge"></span>
   <div class="hdate" id="dateLabel"></div>
   <div class="hgap"></div>
-  <!-- sync status -->
   <div style="display:flex;align-items:center;gap:5px;flex-shrink:0" id="syncStatus">
     <div class="sync-dot ok" id="syncDot"></div>
     <span class="sync-label" id="syncLabel">Live</span>
   </div>
   <div class="hdiv"></div>
-  <!-- auth badge — shows who's logged in, click to logout -->
   <div class="auth-badge none" id="authBadge" onclick="logoutPrompt()" title="Click to sign out">Not signed in</div>
-  <!-- RDR-only buttons -->
   <button class="hbtn red" id="btnPersonnel" onclick="openEditPanel()" title="Manage Personnel" style="display:none">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     <span class="hbtn-label">Personnel</span>
@@ -699,7 +668,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
     <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M6 1v10M1 6h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
     <span class="hbtn-label">Appliance</span>
   </button>
-  <!-- station user: submit paramedic info button -->
   <button class="hbtn" id="btnStnLogin" onclick="showPinScreen()" style="display:none">
     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
     <span class="hbtn-label">Sign in</span>
@@ -711,7 +679,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
 
 <div class="stats-bar" id="statsBar"></div>
 
-<!-- Sign-in banner — visible when not authenticated -->
 <div class="signin-banner" id="signinBanner">
   <div class="signin-banner-text">
     <span class="signin-banner-icon">🔒</span>
@@ -723,7 +690,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </button>
 </div>
 
-<!-- SHIFT PREP BANNER — visible during 1-hr advance window -->
 <div class="shift-prep-banner hidden" id="shiftPrepBanner">
   <div class="shift-prep-text">
     <span class="shift-prep-icon">⏰</span>
@@ -766,7 +732,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </main>
 </div>
 
-<!-- mobile bottom bar -->
 <div class="mob-bar" id="mobBar">
   <div class="mob-fscroll" id="mobFilterRow"></div>
   <button class="mob-fab" onclick="openDrawer()">👥<div class="fab-badge" id="fabBadge">0</div></button>
@@ -785,7 +750,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   <div class="rscroll" id="drawerRosterList" style="flex:1;padding:8px 10px"></div>
 </div>
 
-<!-- APPLIANCE MODAL (RDR only) -->
 <div class="mwrap" id="aModal">
   <div class="modal">
     <div class="modal-hd"><h3>Add Appliance</h3><span class="modal-x" onclick="closeM('aModal')">×</span></div>
@@ -796,7 +760,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </div>
 </div>
 
-<!-- EDIT PERSONNEL PANEL (RDR only) -->
 <div class="edit-panel-wrap" id="editPanel">
   <div class="edit-panel">
     <div class="ep-header">
@@ -838,7 +801,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </div>
 </div>
 
-<!-- AUDIT LOG PANEL (RDR only) -->
 <div class="audit-wrap" id="auditPanel">
   <div class="audit-panel">
     <div class="audit-hd">
@@ -849,7 +811,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </div>
 </div>
 
-<!-- LOGOUT MODAL -->
 <div class="mwrap" id="logoutModal">
   <div class="modal" style="max-width:300px">
     <div class="modal-hd"><h3>Sign out</h3><span class="modal-x" onclick="closeM('logoutModal')">×</span></div>
@@ -861,7 +822,6 @@ body{min-height:100vh;display:flex;flex-direction:column}
   </div>
 </div>
 
-<!-- Firebase SDKs -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -888,21 +848,18 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getDatabase(app);
 
-// expose globals the rest of the script needs
 window._firebase = { auth, db, ref, onValue, set, get, push, serverTimestamp, signInAnonymously, onAuthStateChanged };
 window._firebaseReady = true;
 window.dispatchEvent(new Event('firebaseReady'));
 </script>
 
 <script>
-// ─── RANDOM NAME POOL ─────────────────────────────
 const FIRST=['Wei Ming','Jun Hao','Kai Xian','Rui En','Zheng Yang','Amirul','Faizal','Hafiz','Zulkifli','Imran','Rahul','Karthik','Vikram','Dhanesh','Pradeep','Jun Wei','Bing Rong','Yao Lun','Si Han','Ze Kai','Syafiq','Azri','Naqib','Hakeem','Rizwan','Wen Jie','Jian Wei','Zhi Hao','Yi Xiang','Kian Ann','Aisha','Farhana','Nurul','Siti','Aishah','Mei Ling','Hui Fen','Li Ting','Jia Qi','Yan Ling'];
 const LAST=['Tan','Lim','Lee','Wong','Ng','Ong','Chua','Koh','Chen','Teo','Yap','Goh','Bte Rahmat','Bin Aziz','Bin Hamid','s/o Rajan','s/o Kumar','Pillai','Krishnan'];
 const RANKS=['SGT','SGT','SGT','SGT','SSG','SSG','WO','LTA','CPL'];
 function randName(){return FIRST[~~(Math.random()*FIRST.length)]+' '+LAST[~~(Math.random()*LAST.length)];}
 function randRank(){return RANKS[~~(Math.random()*RANKS.length)];}
 
-// ─── CONSTANTS ────────────────────────────────────
 const STNS=[
   {id:'41',name:'Stn 41',loc:'Jurong'},
   {id:'42',name:'Stn 42',loc:'Tuas'},
@@ -929,8 +886,6 @@ const SORT_MODES=[
 ];
 const RANK_W={COL:7,MAJ:6,CPT:5,LTA:4,WO:3,SWO:3,WO1:3,WO2:3,SSG:2,SGT:1,SGT1:1,SGT2:1,SGT3:1,CPL:0,LCP:0};
 
-// ─── CFS ROLE CONFIG ──────────────────────────────
-// Each entry: { key, label, note (optional) }
 const CFS_ROLES={
   '41':[
     {key:'oic',   label:'S41 EMS OIC'},
@@ -947,26 +902,16 @@ const CFS_ROLES={
     {key:'sets',  label:'S44 SETS'},
   ],
   '45':[
-    // S45 reads OIC from S42 — display only, no edit here
     {key:'oic',   label:'S42/45 EMS OIC', note:'Status controlled by Stn 42', readFrom:'42'},
   ],
 };
 const CFS_STATUSES=['PRESENT','ABSENT','ON LEAVE','OPS','COURSE'];
 
-// ─── STATE ────────────────────────────────────────
 let persons=[], appliances=[], assigns={};
-let cfsStatuses={};     // {stnId: {roleKey: statusString}}
-let cfsOpen={};         // {stnId: boolean} — panel toggle state
-let drag=null,touchPid=null;
+let cfsStatuses={};let cfsOpen={};let drag=null,touchPid=null;
 let filt='all',dark=true,viewMode='grid',sortIdx=0,activeAC=null,epEditId=null;
 
-// Auth state
-let currentUser=null;          // Firebase auth user
-let currentStationId=null;     // "41"–"45" or "RDR" or null
-let isRDR=false;               // full access
-let isStnUser=false;           // station-scoped write
-
-// Shift tracking
+let currentUser=null;let currentStationId=null;let isRDR=false;let isStnUser=false;
 let lastKnownShiftKey=null;
 
 let pidCounter=100;
@@ -980,7 +925,6 @@ function setSyncState(state,msg){
   if(lbl)lbl.textContent=msg;
 }
 
-// ─── PIN SCREEN ────────────────────────────────────
 const PIN_STATIONS=[...STNS,{id:'RDR',name:'RDR',loc:'4th Div'}];
 let pinBuffer='';
 let pinSelectedStn=null;
@@ -1034,14 +978,11 @@ function showPinScreen(){
   document.getElementById('pinErr').textContent='';
   document.querySelectorAll('.pin-stn-btn').forEach(b=>b.classList.remove('sel'));
   checkPinReady();
-  // Focus trap for keyboard input
   document.getElementById('pinScreen').focus();
 }
 
-// Global keydown listener for PIN screen
 document.addEventListener('keydown', function(e){
   if(document.getElementById('pinScreen').classList.contains('hidden'))return;
-  // ignore if focus is inside an input elsewhere
   if(e.target&&e.target!==document.body&&e.target.tagName==='INPUT'&&!e.target.closest('#pinScreen'))return;
   if(e.key>='0'&&e.key<='9'){
     npPress(e.key);
@@ -1050,7 +991,6 @@ document.addEventListener('keydown', function(e){
   } else if(e.key==='Enter'){
     submitPin();
   } else if(/[a-zA-Z!@#$%^&*()_+=\[\]{};':"\\|,.<>\/?`~\-]/.test(e.key)){
-    // Non-digit printable key — flash error
     const err=document.getElementById('pinErr');
     err.textContent='Digits only (0–9)';
     err.style.animation='none';
@@ -1060,10 +1000,6 @@ document.addEventListener('keydown', function(e){
 });
 function hidePinScreen(){document.getElementById('pinScreen').classList.add('hidden');}
 
-// ─── PIN CONFIG ────────────────────────────────────
-// Station PINs: station number is the PIN for simplicity.
-// RDR_PIN: change this to something only your team knows.
-// To rotate any PIN, update the value here and redeploy to GitHub Pages.
 const STATION_PINS = {
   "41": "41",
   "42": "42",
@@ -1080,7 +1016,6 @@ async function submitPin() {
   btn.disabled = true;
   document.getElementById('pinErr').textContent = '';
 
-  // Small delay — makes casual brute-forcing feel slower
   await new Promise(r => setTimeout(r, 400));
 
   const expected = pinSelectedStn === 'RDR'
@@ -1099,12 +1034,10 @@ async function submitPin() {
     return;
   }
 
-  // PIN correct — set auth state locally
   currentStationId = pinSelectedStn;
   isRDR = (pinSelectedStn === 'RDR');
   isStnUser = !isRDR;
 
-  // Write audit entry to Firebase
   try {
     const { db, ref, push } = window._firebase;
     await push(ref(db, 'audit'), {
@@ -1114,7 +1047,6 @@ async function submitPin() {
       ts:        Date.now(),
     });
   } catch (e) {
-    // Audit failure is non-fatal — login still succeeds
     console.warn('Audit write failed:', e.message);
   }
 
@@ -1124,7 +1056,6 @@ async function submitPin() {
   checkPinReady();
 }
 
-// ─── TOAST ─────────────────────────────────────────
 let toastTimer=null;
 function showToast(msg,duration=2800,type=''){
   const t=document.getElementById('toast');
@@ -1179,28 +1110,23 @@ function confirmLogout(){
   currentStationId=null;isRDR=false;isStnUser=false;updateAuthUI();
 }
 
-// ─── FIREBASE DATA INIT ────────────────────────────
 function initFirebaseListeners(){
   const {db,ref,onValue,get}=window._firebase;
 
-  // Personnel
   onValue(ref(db,'personnel'),snap=>{
     if(snap.exists()){
       const data=snap.val();
       persons=Object.values(data).map(p=>({...p}));
     }else{
-      // First run: seed with random data
       seedInitialData();
     }
     refresh();
   });
 
-  // Roster assignments — keyed per station
   STNS.forEach(stn=>{
     onValue(ref(db,'roster/'+stn.id),snap=>{
       if(snap.exists()){
         const data=snap.val();
-        // data is {applianceId: {slotName: personId|null}}
         Object.entries(data).forEach(([appId,slots])=>{
           if(!assigns[appId])assigns[appId]={};
           Object.entries(slots).forEach(([sl,pid])=>{assigns[appId][sl]=pid;});
@@ -1210,13 +1136,11 @@ function initFirebaseListeners(){
     });
   });
 
-  // CFS statuses
   onValue(ref(db,'cfs'),snap=>{
     cfsStatuses=snap.exists()?snap.val():{};
     renderStations();
   });
 
-  // Run shift reset check after listeners are set up
   checkShiftReset();
 }
 
@@ -1235,7 +1159,6 @@ function seedInitialData(){
   initialPersons['p'+(ctr++)]={id:'p'+(ctr-1),name:randName(),rank:'SGT',stn:''};
   set(ref(db,'personnel'),initialPersons);
 
-  // Init empty roster for each appliance
   const initialRoster={};
   STNS.forEach(stn=>{
     initialRoster[stn.id]={};
@@ -1249,12 +1172,10 @@ function seedInitialData(){
 
 function getAppsForStn(stnId){return appliances.filter(a=>a.stn===stnId);}
 
-// ─── WRITE HELPERS ─────────────────────────────────
 async function writeAssign(appId,slot,pid){
   const {db,ref,set,push,serverTimestamp}=window._firebase;
   const app=appliances.find(a=>a.id===appId);if(!app)return;
   const stnId=app.stn;
-  // Permission check client-side (server rules enforce this too)
   if(!currentStationId)return;
   if(isStnUser&&stnId!==currentStationId){
     showToast('⛔ Cannot edit Stn '+stnId+' — you are signed in as Stn '+currentStationId,3000,'err-t');return;
@@ -1262,7 +1183,6 @@ async function writeAssign(appId,slot,pid){
   pendingWrites++;setSyncState('pending','Saving…');
   try{
     await set(ref(db,`roster/${stnId}/${appId}/${slot}`),pid);
-    // Audit entry
     const prevPid=assigns[appId]?.[slot];
     await push(ref(db,'audit'),{
       ts:Date.now(),stationId:currentStationId,
@@ -1288,7 +1208,6 @@ async function writePersonnel(updatedPersons){
   finally{pendingWrites--;if(pendingWrites===0)setTimeout(()=>setSyncState('ok','Live'),1200);}
 }
 
-// ─── HELPERS ───────────────────────────────────────
 function inits(n){return n.split(' ').slice(0,2).map(w=>w[0]).join('').toUpperCase();}
 function avCol(id){const i=persons.findIndex(p=>p.id===id);return i>=0?AVCOLS[i%AVCOLS.length]:'#888';}
 function rankCls(r){
@@ -1330,7 +1249,6 @@ function updateSortUI(){
   const mob=document.getElementById('mobSortBtn');if(mob){mob.textContent=m.icon+' '+m.label;mob.className='vtbtn'+(on?' on':'');}
 }
 
-// ─── RENDER STATS ──────────────────────────────────
 function renderStats(){
   const aset=assignedSet();
   const tS=appliances.reduce((s,a)=>s+a.slots.filter(sl=>sl!=='Driver').length,0);
@@ -1352,7 +1270,7 @@ function renderFilters(){
       return`<button class="${cls}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span>${isEditing?`<span class="fchip-edit-tag">✏ EDITING</span>`:''}</button>`;
     }).join('');
   document.getElementById('filterRow').innerHTML=sidebarHtml;
-  // mobile chips — no edit badge (space constrained)
+
   const mobHtml=
     `<button class="mob-fchip${filt==='all'?' on':''}" onclick="setF('all')"><span class="fn">All</span><span class="fl">Stns</span></button>`+
     STNS.map(s=>`<button class="mob-fchip${filt===s.id?' on':''+(isStnUser&&s.id===currentStationId?' editing-stn':'')}" onclick="setF('${s.id}')"><span class="fn">${s.id}</span><span class="fl">${s.loc}</span></button>`).join('');
@@ -1361,9 +1279,9 @@ function renderFilters(){
 
 function renderRoster(){
   const aset=assignedSet();
-  const canDrag=isRDR||isStnUser; // both RDR and station users can drag
+  const canDrag=isRDR||isStnUser;
   const avail=sortedPersons().filter(p=>{
-    // when a station filter is active, show only that station's crew in sidebar
+
     if(filt!=='all'&&p.stn&&p.stn!==filt)return false;
     return !aset.has(p.id);
   });
@@ -1385,7 +1303,6 @@ function renderRoster(){
   updateSortUI();
 }
 
-// ─── DRAG ──────────────────────────────────────────
 const ghost=document.getElementById('dragGhost');
 function showGhost(pid,x,y){
   const p=persons.find(x=>x.id===pid);if(!p)return;
@@ -1417,7 +1334,7 @@ function bindChipDrag(el){
 }
 document.addEventListener('dragover',e=>{if(drag)moveGhost(e.clientX,e.clientY);});
 function bindDrop(a){
-  if(!canEditStn(a.stn))return; // don't bind drop handlers for stations the user can't edit
+  if(!canEditStn(a.stn))return;
   document.querySelectorAll(`[data-app="${a.id}"][data-slot]`).forEach(slot=>{
     slot.addEventListener('dragover',e=>{e.preventDefault();slot.classList.add('dh');});
     slot.addEventListener('dragleave',e=>{if(!slot.contains(e.relatedTarget))slot.classList.remove('dh');});
@@ -1425,7 +1342,6 @@ function bindDrop(a){
   });
 }
 
-// ─── ASSIGN / UNASSIGN ─────────────────────────────
 function doAssign(appId,sl,pid){
   if(!pid||!assigns[appId])return;
   if(assigns[appId][sl])return;
@@ -1440,28 +1356,26 @@ function unassign(appId,sl){
   refresh();
 }
 
-// ─── AUTOCOMPLETE ──────────────────────────────────
 function onInput(inp){
   const val=inp.value.trim().toLowerCase();const appId=inp.dataset.app,sl=inp.dataset.slot;
   const ac=document.getElementById('ac_'+appId+'_'+sl.replace(/ /g,'_'));if(!ac)return;
   if(val.length<1){ac.classList.remove('show');ac.innerHTML='';return;}
   const aset=assignedSet();
-  // Only suggest crew from the same station as this appliance
+
   const stnId=appliances.find(x=>x.id===appId)?.stn;
   const matches=persons.filter(p=>
     !aset.has(p.id)&&
     p.name.toLowerCase().includes(val)&&
-    (!stnId||!p.stn||p.stn===stnId)  // match station, or allow unassigned (no home stn)
-  ).slice(0,6);
+    (!stnId||!p.stn||p.stn===stnId)  ).slice(0,6);
   if(!matches.length){ac.classList.remove('show');ac.innerHTML='';return;}
   ac.innerHTML=matches.map((p,i)=>`<div class="ac-item${i===0?' sel':''}" data-pid="${p.id}" onmousedown="pickPerson('${appId}','${sl}','${p.id}')"><div class="av" style="background:${avCol(p.id)};width:16px;height:16px">${inits(p.name)}</div><span class="rank-badge ${rankCls(p.rank)}">${p.rank}</span><span>${p.name}</span></div>`).join('');
-  // Position fixed relative to the input element
+
   const rect=inp.getBoundingClientRect();
   ac.style.top=(rect.bottom+4)+'px';
   ac.style.left=rect.left+'px';
   ac.style.width=Math.max(rect.width,200)+'px';
   ac.classList.add('show');
-  activeAC={appId,sl,matches,idx:0}; // pre-select first item
+  activeAC={appId,sl,matches,idx:0};
 }
 function onKey(e,inp){
   if(!activeAC)return;const ac=document.getElementById('ac_'+activeAC.appId+'_'+activeAC.sl.replace(/ /g,'_'));if(!ac)return;
@@ -1476,7 +1390,7 @@ function onKey(e,inp){
     items.forEach((x,i)=>x.classList.toggle('sel',i===activeAC.idx));
   } else if(e.key==='Enter'){
     e.preventDefault();
-    // always pick the highlighted item (idx defaults to 0 = first result)
+
     const target=activeAC.matches[activeAC.idx]??activeAC.matches[0];
     if(target)pickPerson(activeAC.appId,activeAC.sl,target.id);
     else{const val=inp.value.trim();if(val){const np=mkPerson(val,randRank(),'');persons.push(np);doAssign(activeAC.appId,activeAC.sl,np.id);activeAC=null;}}
@@ -1487,7 +1401,6 @@ function onKey(e,inp){
 function hideAC(inp,d){setTimeout(()=>{const ac=document.getElementById('ac_'+inp.dataset.app+'_'+inp.dataset.slot.replace(/ /g,'_'));if(ac)ac.classList.remove('show');},d);}
 function pickPerson(aId,sl,pid){if(assigns[aId][sl])return;if(Object.values(assigns[aId]).includes(pid))return;doAssign(aId,sl,pid);activeAC=null;}
 
-// ─── RENDER CFS PANEL ──────────────────────────────
 function renderCFSPanel(stn){
   const roles=CFS_ROLES[stn.id];
   if(!roles||!roles.length)return'';
@@ -1528,7 +1441,6 @@ function renderCFSPanelBody(stn){
   </div>`;
 }
 
-// ─── RENDER STATIONS ───────────────────────────────
 function renderStations(){
   const area=document.getElementById('stnArea');area.innerHTML='';
   STNS.forEach(stn=>{
@@ -1562,7 +1474,7 @@ function renderSlot(a,sl,canEdit){
   const pid=assigns[a.id]&&assigns[a.id][sl];
   const p=pid?persons.find(x=>x.id===pid):null;
   const isOpt=sl==='Driver';
-  // Station users only edit Paramedic slots (REDCON focus)
+
   const editable=canEdit&&(!isStnUser||sl==='Paramedic');
   return`<div class="slot${p?' filled':''}${!editable?' locked':''}" data-app="${a.id}" data-slot="${sl}" id="slot_${a.id}_${sl.replace(/ /g,'_')}">
     <span class="slot-role">${sl}${isOpt?' ·opt':''}</span>
@@ -1578,7 +1490,6 @@ function renderSlot(a,sl,canEdit){
   </div>`;
 }
 
-// ─── EDIT PANEL (RDR only) ─────────────────────────
 function openEditPanel(){if(!isRDR)return;document.getElementById('editPanel').classList.add('open');renderEpList();document.getElementById('epName').focus();}
 function closeEditPanel(){document.getElementById('editPanel').classList.remove('open');epEditId=null;}
 document.getElementById('editPanel').addEventListener('click',e=>{if(e.target===document.getElementById('editPanel'))closeEditPanel();});
@@ -1646,7 +1557,6 @@ function epClearUnassigned(){
 }
 document.getElementById('epName').addEventListener('keydown',e=>{if(e.key==='Enter')epAdd();});
 
-// ─── AUDIT LOG (RDR only) ─────────────────────────
 function openAuditPanel(){
   if(!isRDR)return;
   document.getElementById('auditPanel').classList.add('open');
@@ -1686,9 +1596,7 @@ async function loadAuditLog(){
   }catch(err){list.innerHTML=`<div class="audit-empty">Failed to load: ${err.message}</div>`;}
 }
 
-// ─── MISC ──────────────────────────────────────────
 function setF(f){
-  // Cross-station view alert: station users can VIEW other stations, but show a reminder
   if(isStnUser&&f!=='all'&&f!==currentStationId){
     showToast('👁 Viewing Stn '+f+' — edits locked to your Stn '+currentStationId,3000,'warn');
   }
@@ -1709,23 +1617,15 @@ function toggleDark(){dark=!dark;document.documentElement.classList.toggle('lt',
 function openDrawer(){document.getElementById('crewDrawer').classList.add('open');document.getElementById('mobOverlay').classList.add('open');}
 function closeDrawer(){document.getElementById('crewDrawer').classList.remove('open');document.getElementById('mobOverlay').classList.remove('open');}
 
-// ─── SHIFT LOGIC ───────────────────────────────────
-// AM: 0800-2000  |  PM: 2000-0800
-// Prep windows open 1hr early: AM prep from 0700, PM prep from 1900
 function getShiftInfo(){
   const now=new Date();const h=now.getHours();
   const dateStr=now.toISOString().slice(0,10);
-  // PM window: h >= 19 (1900 prep) or h < 7 (still in overnight PM)
   const isPM=(h>=19||h<7);
   const shift=isPM?'PM':'AM';
-  // For date key: if h<7 the PM shift started yesterday
   const keyDate=(!isPM)?dateStr:
     (h>=19)?dateStr:new Date(now-86400000).toISOString().slice(0,10);
   const key=keyDate+'-'+shift;
-  // Prep window flags
-  const isAMprep=(h===7);   // 0700-0759
-  const isPMprep=(h===19);  // 1900-1959
-  const isPrep=isAMprep||isPMprep;
+  const isAMprep=(h===7);  const isPMprep=(h===19);  const isPrep=isAMprep||isPMprep;
   return{shift,key,isPrep,isAMprep,isPMprep,dateStr};
 }
 
@@ -1734,7 +1634,6 @@ function setShift(){
   const b=document.getElementById('shiftBadge');
   b.textContent=(shift==='AM'?'AM Shift 0800':'PM Shift 2000')+(isPrep?' · Prep':'');
   b.className='shift-tag '+(shift==='AM'?'shift-am':'shift-pm');
-  // Update shift prep banner
   const banner=document.getElementById('shiftPrepBanner');
   const pill=document.getElementById('shiftKeyPill');
   const msg=document.getElementById('shiftPrepMsg');
@@ -1749,7 +1648,6 @@ function setShift(){
   }
 }
 
-// Checks and performs a shift reset if the shift key has changed
 async function checkShiftReset(){
   if(!window._firebase)return;
   const{db,ref,set,get}=window._firebase;
@@ -1758,7 +1656,6 @@ async function checkShiftReset(){
     const snap=await get(ref(db,'meta/shiftKey'));
     const stored=snap.exists()?snap.val():null;
     if(stored!==key){
-      // Shift has changed — reset all roster assignments
       console.log('[Shift] Key changed',stored,'→',key,'— resetting roster');
       const emptyRoster={};
       STNS.forEach(stn=>{
@@ -1768,13 +1665,9 @@ async function checkShiftReset(){
           a.slots.forEach(sl=>{emptyRoster[stn.id][a.id][sl]=null;});
         });
       });
-      // Clear local assigns
       appliances.forEach(a=>{assigns[a.id]={};a.slots.forEach(s=>{assigns[a.id][s]=null;});});
       await set(ref(db,'roster'),emptyRoster);
       await set(ref(db,'meta/shiftKey'),key);
-      // TODO: CALENDAR ARCHIVE — before resetting, save snapshot of outgoing shift to
-      // Firebase path `archive/${stored}` for historical reference. Implement calendar
-      // view in a future release to browse past shift rosters by date/shift.
       showToast('🔄 New shift — roster has been reset',4000,'warn');
       refresh();
     }else{
@@ -1788,7 +1681,6 @@ function initSel(){['maStn','epStn'].forEach(id=>{const s=document.getElementByI
 
 function refresh(){renderStats();renderFilters();renderRoster();renderStations();}
 
-// ─── CFS STATUS FUNCTIONS ──────────────────────────
 function toggleCFSPanel(stnId){
   cfsOpen[stnId]=!cfsOpen[stnId];
   const panel=document.getElementById('cfs-panel-'+stnId);
@@ -1809,11 +1701,9 @@ function cfsDotClass(status){
 async function writeCFS(stnId,roleKey,status){
   if(!window._firebase)return;
   const{db,ref,set}=window._firebase;
-  // Permission: RDR can edit any; station user can only edit own station's roles (not readFrom)
   const roles=CFS_ROLES[stnId]||[];
   const role=roles.find(r=>r.key===roleKey);
-  if(!role||role.readFrom)return; // read-only mirror
-  if(!isRDR&&(!isStnUser||currentStationId!==stnId)){
+  if(!role||role.readFrom)return;  if(!isRDR&&(!isStnUser||currentStationId!==stnId)){
     showToast('⛔ You can only edit your own station CFS statuses',2800,'err-t');return;
   }
   if(!cfsStatuses[stnId])cfsStatuses[stnId]={};
@@ -1826,7 +1716,6 @@ async function writeCFS(stnId,roleKey,status){
   }catch(e){setSyncState('err','Error');showToast('CFS write failed: '+e.message,3000,'err-t');}
 }
 
-// ─── APPLIANCE DEFINITIONS (local, not Firebase) ──
 appliances=[
   {id:'A411',stn:'41',slots:['Paramedic','Driver']},{id:'A412',stn:'41',slots:['Paramedic','Driver']},
   {id:'A413',stn:'41',slots:['Paramedic','Driver']},{id:'A414',stn:'41',slots:['Paramedic','Driver']},
@@ -1846,11 +1735,8 @@ appliances=[
 ];
 appliances.forEach(a=>{if(!assigns[a.id]){assigns[a.id]={};a.slots.forEach(s=>{assigns[a.id][s]=null;})}});
 
-// ─── BOOT ──────────────────────────────────────────
 setDate();setShift();initSel();buildPinScreen();refresh();
-setInterval(()=>{setDate();setShift();},30000); // update date+shift badge every 30s
-setInterval(checkShiftReset,120000); // check for shift rollover every 2 minutes
-
+setInterval(()=>{setDate();setShift();},30000);setInterval(checkShiftReset,120000);
 window.addEventListener('firebaseReady', async () => {
   const { auth, signInAnonymously, onAuthStateChanged } = window._firebase;
   try {
