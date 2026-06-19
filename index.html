@@ -5,82 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>SCDF EMS — Ops Roster</title>
 
-<!--
-=======================================================================
-  FIREBASE SETUP GUIDE  (no Cloud Functions needed — Spark plan ok)
-=======================================================================
-
-  STEP 1 — Create Firebase project
-    1. Go to https://console.firebase.google.com
-    2. "Add project" → name it "scdf-ems-roster" → disable Analytics
-    3. Click "Create project"
-
-  STEP 2 — Enable Realtime Database
-    1. Left sidebar → Build → Realtime Database → "Create Database"
-    2. Region: Singapore (asia-southeast1)
-    3. Start in LOCKED mode → "Enable"
-
-  STEP 3 — Enable Anonymous Authentication
-    1. Left sidebar → Build → Authentication → "Get started"
-    2. Sign-in method tab → Anonymous → Enable → Save
-
-  STEP 4 — Get your web app config
-    1. Project Overview (home icon) → click the "</>" web icon
-    2. Register app as "ems-roster-web", skip Firebase Hosting
-    3. Copy the firebaseConfig object → paste it below where it says
-       PASTE YOUR FIREBASE CONFIG HERE
-
-  STEP 5 — Set Security Rules
-    1. Realtime Database → Rules tab
-    2. Replace everything with the rules below → click Publish
-
-    {
-      "rules": {
-        "roster": {
-          ".read":  "auth != null",
-          ".write": "auth != null"
-        },
-        "audit": {
-          ".read":  "auth != null",
-          ".write": "auth != null"
-        },
-        "personnel": {
-          ".read":  "auth != null",
-          ".write": "auth != null"
-        },
-        "cfs": {
-          ".read":  "auth != null",
-          ".write": "auth != null"
-        },
-        "meta": {
-          ".read":  "auth != null",
-          ".write": "auth != null"
-        }
-      }
-    }
-
-    Note: write scoping by station is enforced client-side via the
-    PIN system below. Firebase rules keep the database closed to
-    anyone not anonymously signed in via this app.
-
-  STEP 6 — Deploy to GitHub Pages
-    1. Create a repo (private recommended if your CO approves)
-    2. Upload this file as index.html
-    3. Settings → Pages → Branch: main → folder: / (root) → Save
-    4. Live at https://<username>.github.io/<reponame>
-
-=======================================================================
-  PIN SCHEME — edit STATION_PINS and RDR_PIN in the script below
-    Stn 41 Jurong      → PIN: 41
-    Stn 42 Tuas        → PIN: 42
-    Stn 43 Woodlands   → PIN: 43
-    Stn 44 Bukit Batok → PIN: 44
-    Stn 45 Tuas View   → PIN: 45
-    RDR (your team)    → PIN: set RDR_PIN to something non-obvious
-  To rotate any PIN: change the value here and redeploy the HTML.
-=======================================================================
--->
-
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
 
@@ -581,16 +505,44 @@ body{min-height:100vh;display:flex;flex-direction:column}
   .body{display:block;overflow:visible;flex:none}
   .sidebar{display:none}
   .main{overflow:visible;padding:12px 12px 80px}
+  .mob-bar{display:flex}
+  .crew-drawer{display:flex}
+
+  /* header — compact + scrollable fallback so nothing breaks layout */
+  .header{padding:0 10px;gap:6px;overflow-x:auto;scrollbar-width:none}
+  .header::-webkit-scrollbar{display:none}
+  .hlogo{width:26px;height:26px;font-size:14px;border-radius:5px}
+  .hbrand .name{font-size:11px}
+  .hbrand .sub{display:none}
   .hdiv,.hdate{display:none}
+  .shift-tag{font-size:9.5px;padding:3px 7px;gap:3px}
+  #syncStatus{gap:0}
+  .sync-label{display:none}
+  .auth-badge{font-size:9.5px;padding:3px 7px;max-width:92px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .hbtn-label{display:none}
-  .hbtn{padding:0 8px;width:34px;justify-content:center}
+  .hbtn{padding:0 8px;width:32px;height:28px;justify-content:center}
+  .theme-btn{width:30px;height:28px;font-size:13px}
+
   .stats-bar{padding:0 12px}
   .stat-item{min-width:80px;padding:8px 12px 8px 0;margin-right:12px}
   .stat-icon{width:26px;height:26px}
   .stat-num{font-size:16px}
   .stat-lbl{font-size:9px}
-  .mob-bar{display:flex}
-  .crew-drawer{display:flex}
+
+  /* sign-in / shift-prep banners — stack instead of squeeze */
+  .signin-banner,.shift-prep-banner{flex-direction:column;align-items:flex-start;gap:8px}
+  .signin-banner-btn{width:100%;justify-content:center}
+  .shift-key-pill{align-self:flex-start}
+
+  /* CFS panel — full-width cards + larger tap targets */
+  .cfs-toggle-btn{height:30px;padding:0 12px}
+  .cfs-roles{flex-direction:column}
+  .cfs-role-card{width:100%}
+  .cfs-status-sel{height:32px;flex:1}
+
+  /* toast — wrap instead of overflowing the viewport */
+  #toast{max-width:calc(100vw - 32px);white-space:normal;text-align:center}
+
   .agrid{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;padding:8px}
   .ar-item{flex-direction:column}
   .ar-hd{min-width:0;border-right:none;border-bottom:1px solid var(--bdr);padding:7px 12px}
@@ -601,6 +553,10 @@ body{min-height:100vh;display:flex;flex-direction:column}
   .ep-add{width:100%;border-right:none;border-bottom:1px solid var(--bdr)}
   .ep-body{flex-direction:column}
   .edit-panel{max-height:95vh}
+}
+@media(max-width:380px){
+  .agrid{grid-template-columns:1fr}
+  .hbrand .name{display:none}
 }
 @media(min-width:700px){
   .mob-bar,.crew-drawer,.mob-overlay{display:none!important}
